@@ -1,0 +1,62 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  tests:
+    name: Tests (PHP ${{ matrix.php }}, ${{ matrix.dependency-versions }} deps)
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        # PHPUnit resolves per PHP version: 8.1 -> ^10.5, 8.2 -> ^11,
+        # 8.3 -> ^12, 8.4+ -> ^13. The suite is compatible with all of them.
+        php: ['8.1', '8.2', '8.3', '8.4', '8.5']
+        dependency-versions: [highest]
+        include:
+          - php: '8.1'
+            dependency-versions: lowest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: ${{ matrix.php }}
+          coverage: none
+
+      - name: Install dependencies
+        uses: ramsey/composer-install@v3
+        with:
+          # 'highest' runs composer update, so each PHP version resolves its
+          # own dependency set instead of failing on the committed lock file.
+          dependency-versions: ${{ matrix.dependency-versions }}
+
+      - name: Run tests
+        run: vendor/bin/phpunit
+
+  static-analysis:
+    name: Static analysis
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.4'
+          coverage: none
+
+      - name: Validate composer.json
+        run: composer validate --strict
+
+      - name: Install dependencies
+        uses: ramsey/composer-install@v3
+
+      - name: PHPStan
+        run: vendor/bin/phpstan analyse --memory-limit=1G --no-progress
