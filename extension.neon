@@ -1,0 +1,58 @@
+parametersSchema:
+	effects: structure({
+		stubs: listOf(anyOf(
+			structure({method: string(), effects: listOf(string())}),
+			structure({function: string(), effects: listOf(string())})
+		)),
+		rules: listOf(structure({
+			classPattern: string(),
+			methodPattern: string(),
+			effectFree: listOf(string())
+		})),
+		allowedEffects: listOf(string()),
+		excludeImplementationsFrom: listOf(string())
+	})
+
+parameters:
+	effects:
+		stubs: []
+		rules: []
+		allowedEffects: []
+		excludeImplementationsFrom:
+			- 'Tests\*'
+			- '*\Tests\*'
+
+services:
+	-
+		class: DaveLiddament\PhpstanEffectSystem\Collectors\EffectAttributeReader
+	-
+		class: DaveLiddament\PhpstanEffectSystem\Collectors\MethodDeclarationCollector
+		tags:
+			- phpstan.collector
+	-
+		class: DaveLiddament\PhpstanEffectSystem\Collectors\FunctionDeclarationCollector
+		tags:
+			- phpstan.collector
+	-
+		class: DaveLiddament\PhpstanEffectSystem\Collectors\CallResolver
+	-
+		class: DaveLiddament\PhpstanEffectSystem\Collectors\CallCollector
+		tags:
+			- phpstan.collector
+	-
+		class: DaveLiddament\PhpstanEffectSystem\Collectors\FirstClassCallableCollector
+		tags:
+			- phpstan.collector
+	-
+		class: DaveLiddament\PhpstanEffectSystem\Collectors\ClassHierarchyCollector
+		tags:
+			- phpstan.collector
+	-
+		class: DaveLiddament\PhpstanEffectSystem\Rules\EffectSystemRule
+		tags:
+			- phpstan.rules.rule
+		arguments:
+			stubs: %effects.stubs%
+			rules: %effects.rules%
+			allowedEffects: %effects.allowedEffects%
+			excludeImplementationsFrom: %effects.excludeImplementationsFrom%

@@ -1,0 +1,40 @@
+{
+    "name": "dave-liddament/phpstan-effect-system",
+    "description": "PHPStan extension implementing a lightweight effect system: declare effects at the source, infer transitive propagation, enforce effect-free boundaries.",
+    "type": "phpstan-extension",
+    "keywords": ["phpstan", "phpstan-extension", "static analysis", "effects"],
+    "require-dev": {
+        "phpstan/phpstan": "^2.2",
+        "phpunit/phpunit": "^13.2"
+    },
+    "license": "MIT",
+    "autoload": {
+        "psr-4": {
+            "DaveLiddament\\PhpstanEffectSystem\\": "src/"
+        }
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "DaveLiddament\\PhpstanEffectSystem\\Tests\\": "tests/"
+        },
+        "classmap": [
+            "tests/Rules/data/"
+        ]
+    },
+    "authors": [
+        {
+            "name": "Dave",
+            "email": "dave@lampbristol.com"
+        }
+    ],
+    "require": {
+        "php": ">=8.1"
+    },
+    "extra": {
+        "phpstan": {
+            "includes": [
+                "extension.neon"
+            ]
+        }
+    }
+}
