@@ -65,7 +65,7 @@ The attribute classes have zero dependencies. Installing the package in
 `require-dev` is safe even though the attributes appear in production code:
 PHP never autoloads an attribute class unless something reflects on it.
 
-Requires PHP >= 8.1 and PHPStan 2.x.
+Requires PHP >= 8.3 and PHPStan 2.x.
 
 ## The attributes
 
