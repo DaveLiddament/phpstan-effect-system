@@ -77,14 +77,17 @@ final class CallResolver
      */
     public function resolveStaticCallees(Node\Name|Expr $class, Node\Identifier|Expr $name, Scope $scope): array
     {
-        if (!$class instanceof Node\Name) {
-            return [];
+        if ($class instanceof Node\Name) {
+            // Only static:: is subject to late static binding; self::, parent::
+            // and explicit class names resolve to exactly one implementation.
+            $lateStaticBinding = $class->toLowerString() === 'static';
+            $calledOnType = $scope->resolveTypeByName($class);
+        } else {
+            // $object::method() / $classString::method(): the runtime class
+            // may be any subtype of the static type.
+            $lateStaticBinding = true;
+            $calledOnType = $scope->getType($class)->getObjectTypeOrClassStringObjectType();
         }
-
-        // Only static:: is subject to late static binding; self::, parent:: and
-        // explicit class names resolve to exactly one implementation.
-        $lateStaticBinding = $class->toLowerString() === 'static';
-        $calledOnType = $scope->resolveTypeByName($class);
 
         $callees = [];
         foreach ($this->resolveCallNames($name, $scope) as $methodName) {
@@ -140,27 +143,45 @@ final class CallResolver
     public function resolveNewCallees(New_ $node, Scope $scope): array
     {
         if ($node->class instanceof Node\Name) {
+            // new static() may instantiate any subclass.
+            $lateStaticBinding = $node->class->toLowerString() === 'static';
             $type = $scope->resolveTypeByName($node->class);
         } elseif ($node->class instanceof Node\Stmt\Class_) {
             // Anonymous class: the reflection's internal name is stable
             // (derived from file + position).
+            $lateStaticBinding = false;
             $type = $scope->getType($node);
         } else {
-            return [];
+            // new $classString() / new $object(): any subtype of the static
+            // type may be instantiated.
+            $lateStaticBinding = true;
+            $type = $scope->getType($node->class)->getObjectTypeOrClassStringObjectType();
         }
 
         $callees = [];
         foreach ($type->getObjectClassReflections() as $classReflection) {
             if (!$classReflection->hasConstructor()) {
+                if ($lateStaticBinding && !$classReflection->isFinal()) {
+                    // No constructor here, but a subclass may declare one.
+                    $callees[] = [
+                        'key' => MethodKey::forMethod($classReflection->getName(), '__construct'),
+                        'calledClass' => $classReflection->getName(),
+                        'method' => '__construct',
+                        'dispatch' => true,
+                    ];
+                }
                 continue;
             }
             $constructor = $classReflection->getConstructor();
+            $dispatch = $lateStaticBinding
+                && !$constructor->isFinal()->yes()
+                && !$classReflection->isFinal();
 
             $callees[] = [
                 'key' => MethodKey::forMethod($constructor->getDeclaringClass()->getName(), '__construct'),
-                'calledClass' => null,
-                'method' => null,
-                'dispatch' => false,
+                'calledClass' => $classReflection->getName(),
+                'method' => '__construct',
+                'dispatch' => $dispatch,
             ];
         }
 

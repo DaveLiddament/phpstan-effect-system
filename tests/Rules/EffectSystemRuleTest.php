@@ -174,6 +174,28 @@ final class EffectSystemRuleTest extends EffectSystemRuleTestCase
         ]);
     }
 
+    public function testLateStaticBindingAndClassStringCallsDispatchToSubclasses(): void
+    {
+        $this->analyse([__DIR__ . '/data/late-static-binding.php'], [
+            [
+                "Method EffectTest\\LateStaticBinding\\Consumer::staticCallOnObject() is #[EffectFree('slow')] but reaches effect 'slow': EffectTest\\LateStaticBinding\\Consumer::staticCallOnObject() -> EffectTest\\LateStaticBinding\\SlowChild::ping() (declares #[Effect('slow')]).",
+                54,
+            ],
+            [
+                "Method EffectTest\\LateStaticBinding\\Consumer::staticCallOnClassString() is #[EffectFree('slow')] but reaches effect 'slow': EffectTest\\LateStaticBinding\\Consumer::staticCallOnClassString() -> EffectTest\\LateStaticBinding\\SlowChild::ping() (declares #[Effect('slow')]).",
+                63,
+            ],
+            [
+                "Method EffectTest\\LateStaticBinding\\Consumer::newOnClassString() is #[EffectFree('slow')] but reaches effect 'slow': EffectTest\\LateStaticBinding\\Consumer::newOnClassString() -> EffectTest\\LateStaticBinding\\Plain::__construct() (declares #[Effect('slow')]).",
+                72,
+            ],
+            [
+                "Method EffectTest\\LateStaticBinding\\FactoryConsumer::viaNewStatic() is #[EffectFree('slow')] but reaches effect 'slow': EffectTest\\LateStaticBinding\\FactoryConsumer::viaNewStatic() -> EffectTest\\LateStaticBinding\\Factory::create() -> EffectTest\\LateStaticBinding\\SlowFactory::__construct() (declares #[Effect('slow')]).",
+                104,
+            ],
+        ]);
+    }
+
     public function testEffectAndEffectFreeOnSameMethodIsAContradiction(): void
     {
         $this->analyse([__DIR__ . '/data/contradiction.php'], [
