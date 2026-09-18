@@ -24,7 +24,7 @@ use PHPStan\Collectors\Collector;
  * First-class callables never reach this collector: PHPStan replaces them
  * with virtual nodes handled by the *CallableCollector classes.
  *
- * @implements Collector<CallLike, array{caller: string, line: int, callees: list<array{key: string, calledClass: string|null, method: string|null, dispatch: bool}>}>
+ * @implements Collector<CallLike, array{caller: string, callees: list<array{key: string, calledClass: string|null, method: string|null, dispatch: bool}>}>
  */
 final class CallCollector implements Collector
 {
@@ -52,6 +52,6 @@ final class CallCollector implements Collector
             $callees = [];
         }
 
-        return $this->callResolver->buildRecord($scope, $node->getStartLine(), $callees);
+        return $this->callResolver->buildRecord($scope, $callees);
     }
 }

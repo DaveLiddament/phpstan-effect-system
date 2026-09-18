@@ -20,23 +20,22 @@ final class CallGraphBuilderTest extends TestCase
     public function testDispatchExpansionSkipsExcludedNamespacesAndKeepsOthers(): void
     {
         $declarations = new Declarations();
-        $declarations->add(new DeclarationRecord('app\iface::run', 'App\Iface', 'run', 'f.php', 1, [], [], [], true));
-        $declarations->add(new DeclarationRecord('app\prod::run', 'App\Prod', 'run', 'f.php', 2, [], [], [], false));
-        $declarations->add(new DeclarationRecord('app\tests\fake::run', 'App\Tests\Fake', 'run', 'f.php', 3, [], [], [], false));
-        $declarations->add(new DeclarationRecord('tests\otherfake::run', 'Tests\OtherFake', 'run', 'f.php', 4, [], [], [], false));
+        $declarations->add(new DeclarationRecord('app\iface::run', 'App\Iface', 'run', 'f.php', 1, [], [], []));
+        $declarations->add(new DeclarationRecord('app\prod::run', 'App\Prod', 'run', 'f.php', 2, [], [], []));
+        $declarations->add(new DeclarationRecord('app\tests\fake::run', 'App\Tests\Fake', 'run', 'f.php', 3, [], [], []));
+        $declarations->add(new DeclarationRecord('tests\otherfake::run', 'Tests\OtherFake', 'run', 'f.php', 4, [], [], []));
 
         $hierarchy = ClassHierarchy::fromCollectedRecords([
-            ['class' => 'App\Iface', 'parents' => [], 'interfaces' => [], 'isInterface' => true, 'isAbstract' => false, 'isFinal' => false, 'isAnonymous' => false],
-            ['class' => 'App\Prod', 'parents' => [], 'interfaces' => ['App\Iface'], 'isInterface' => false, 'isAbstract' => false, 'isFinal' => false, 'isAnonymous' => false],
-            ['class' => 'App\Tests\Fake', 'parents' => [], 'interfaces' => ['App\Iface'], 'isInterface' => false, 'isAbstract' => false, 'isFinal' => false, 'isAnonymous' => false],
-            ['class' => 'Tests\OtherFake', 'parents' => [], 'interfaces' => ['App\Iface'], 'isInterface' => false, 'isAbstract' => false, 'isFinal' => false, 'isAnonymous' => false],
+            ['class' => 'App\Iface', 'parents' => [], 'interfaces' => []],
+            ['class' => 'App\Prod', 'parents' => [], 'interfaces' => ['App\Iface']],
+            ['class' => 'App\Tests\Fake', 'parents' => [], 'interfaces' => ['App\Iface']],
+            ['class' => 'Tests\OtherFake', 'parents' => [], 'interfaces' => ['App\Iface']],
         ]);
 
         $builder = new CallGraphBuilder(['Tests\*', '*\Tests\*']);
         $graph = $builder->build([
             [
                 'caller' => 'app\caller::go',
-                'line' => 10,
                 'callees' => [
                     ['key' => 'app\iface::run', 'calledClass' => 'App\Iface', 'method' => 'run', 'dispatch' => true],
                 ],
@@ -52,17 +51,16 @@ final class CallGraphBuilderTest extends TestCase
     public function testInheritedImplementationsResolveThroughParentChain(): void
     {
         $declarations = new Declarations();
-        $declarations->add(new DeclarationRecord('app\base::run', 'App\Base', 'run', 'f.php', 1, [], [], [], false));
+        $declarations->add(new DeclarationRecord('app\base::run', 'App\Base', 'run', 'f.php', 1, [], [], []));
 
         $hierarchy = ClassHierarchy::fromCollectedRecords([
-            ['class' => 'App\Base', 'parents' => [], 'interfaces' => [], 'isInterface' => false, 'isAbstract' => false, 'isFinal' => false, 'isAnonymous' => false],
-            ['class' => 'App\Child', 'parents' => ['App\Base'], 'interfaces' => [], 'isInterface' => false, 'isAbstract' => false, 'isFinal' => false, 'isAnonymous' => false],
+            ['class' => 'App\Base', 'parents' => [], 'interfaces' => []],
+            ['class' => 'App\Child', 'parents' => ['App\Base'], 'interfaces' => []],
         ]);
 
         $graph = (new CallGraphBuilder([]))->build([
             [
                 'caller' => 'app\caller::go',
-                'line' => 5,
                 'callees' => [
                     ['key' => 'app\base::run', 'calledClass' => 'App\Base', 'method' => 'run', 'dispatch' => true],
                 ],

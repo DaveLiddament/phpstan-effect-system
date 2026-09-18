@@ -17,7 +17,7 @@ final class ClassHierarchy
     private array $subtypes = [];
 
     /**
-     * @param list<array{class: string, parents: list<string>, interfaces: list<string>, isInterface: bool, isAbstract: bool, isFinal: bool, isAnonymous: bool}> $records
+     * @param list<array{class: string, parents: list<string>, interfaces: list<string>}> $records
      */
     public static function fromCollectedRecords(array $records): self
     {

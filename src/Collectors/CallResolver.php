@@ -44,9 +44,9 @@ final class CallResolver
 
     /**
      * @param list<Callee> $callees
-     * @return array{caller: string, line: int, callees: list<Callee>}|null
+     * @return array{caller: string, callees: list<Callee>}|null
      */
-    public function buildRecord(Scope $scope, int $line, array $callees): ?array
+    public function buildRecord(Scope $scope, array $callees): ?array
     {
         if ($callees === []) {
             return null;
@@ -57,7 +57,7 @@ final class CallResolver
             return null;
         }
 
-        return ['caller' => $caller, 'line' => $line, 'callees' => $callees];
+        return ['caller' => $caller, 'callees' => $callees];
     }
 
     /**

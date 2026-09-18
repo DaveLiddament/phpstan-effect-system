@@ -13,7 +13,7 @@ use PHPStan\Node\InClassNode;
  * Records the class hierarchy facts phase 2 needs for dynamic-dispatch
  * expansion and EffectFree contract inheritance.
  *
- * @implements Collector<InClassNode, array{class: string, parents: list<string>, interfaces: list<string>, isInterface: bool, isAbstract: bool, isFinal: bool, isAnonymous: bool}>
+ * @implements Collector<InClassNode, array{class: string, parents: list<string>, interfaces: list<string>}>
  */
 final class ClassHierarchyCollector implements Collector
 {
@@ -35,10 +35,6 @@ final class ClassHierarchyCollector implements Collector
             'class' => $classReflection->getName(),
             'parents' => $classReflection->getParentClassesNames(),
             'interfaces' => $interfaces,
-            'isInterface' => $classReflection->isInterface(),
-            'isAbstract' => $classReflection->isAbstract(),
-            'isFinal' => $classReflection->isFinal(),
-            'isAnonymous' => $classReflection->isAnonymous(),
         ];
     }
 }

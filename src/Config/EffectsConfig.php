@@ -98,7 +98,6 @@ final class EffectsConfig
                 $effects,
                 [],
                 [],
-                false,
             );
         }
 
@@ -117,7 +116,6 @@ final class EffectsConfig
             $effects,
             [],
             [],
-            false,
         );
     }
 

@@ -20,7 +20,7 @@ final class CallGraphBuilder
     }
 
     /**
-     * @param list<array{caller: string, line: int, callees: list<array{key: string, calledClass: string|null, method: string|null, dispatch: bool}>}> $callRecords
+     * @param list<array{caller: string, callees: list<array{key: string, calledClass: string|null, method: string|null, dispatch: bool}>}> $callRecords
      */
     public function build(array $callRecords, ClassHierarchy $hierarchy, Declarations $declarations): CallGraph
     {
