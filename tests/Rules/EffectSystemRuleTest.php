@@ -127,6 +127,31 @@ final class EffectSystemRuleTest extends EffectSystemRuleTestCase
         ]);
     }
 
+    public function testOnlyTheRouteReachingTheSlowMethodIsReported(): void
+    {
+        // A::slowRoute() and A::fastRoute() both go A -> B -> C, but only one
+        // ends at the C method that declares the effect.
+        $this->analyse([__DIR__ . '/data/method-level-precision.php'], [
+            [
+                "Method EffectTest\\MethodLevelPrecision\\A::slowRoute() is #[EffectFree('slow')] but reaches effect 'slow': EffectTest\\MethodLevelPrecision\\A::slowRoute() -> EffectTest\\MethodLevelPrecision\\B::viaSlow() -> EffectTest\\MethodLevelPrecision\\C::slow() (declares #[Effect('slow')]).",
+                47,
+            ],
+        ]);
+    }
+
+    public function testOnlyTheSlowRouteIsReportedThroughAnInterfaceAndTestDoublesAreIgnored(): void
+    {
+        // The code only references the interface C; the effect is declared on
+        // the production implementation. The Tests\FakeC double is slow in
+        // both methods and must not make fastRoute() a violation.
+        $this->analyse([__DIR__ . '/data/interface-method-precision.php'], [
+            [
+                "Method EffectTest\\InterfaceMethodPrecision\\A::slowRoute() is #[EffectFree('slow')] but reaches effect 'slow': EffectTest\\InterfaceMethodPrecision\\A::slowRoute() -> EffectTest\\InterfaceMethodPrecision\\B::viaSlow() -> EffectTest\\InterfaceMethodPrecision\\ProdC::slow() (declares #[Effect('slow')]).",
+                54,
+            ],
+        ]);
+    }
+
     public function testEffectAndEffectFreeOnSameMethodIsAContradiction(): void
     {
         $this->analyse([__DIR__ . '/data/contradiction.php'], [
