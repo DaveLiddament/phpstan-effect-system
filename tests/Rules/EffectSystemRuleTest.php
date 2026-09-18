@@ -152,6 +152,28 @@ final class EffectSystemRuleTest extends EffectSystemRuleTestCase
         ]);
     }
 
+    public function testInterfaceContractAppliesToImplementationInheritedFromParentClass(): void
+    {
+        // Child implements Runner but inherits run() from Base, which knows
+        // nothing about Runner. Base::run() is still what fulfils the contract.
+        $this->analyse([__DIR__ . '/data/inherited-implementation-contract.php'], [
+            [
+                "Method EffectTest\\InheritedImplementationContract\\Base::run() is #[EffectFree('slow')] (inherited from EffectTest\\InheritedImplementationContract\\Runner::run() via EffectTest\\InheritedImplementationContract\\Child) but reaches effect 'slow': EffectTest\\InheritedImplementationContract\\Base::run() -> EffectTest\\InheritedImplementationContract\\Db::query() (declares #[Effect('slow')]).",
+                27,
+            ],
+        ]);
+    }
+
+    public function testPrivateMethodsDoNotInheritContracts(): void
+    {
+        $this->analyse([__DIR__ . '/data/private-method-contract.php'], [
+            [
+                "Method EffectTest\\PrivateMethodContract\\ChildService::hook() is #[EffectFree('slow')] (inherited from EffectTest\\PrivateMethodContract\\ParentService::hook()) but reaches effect 'slow': EffectTest\\PrivateMethodContract\\ChildService::hook() -> EffectTest\\PrivateMethodContract\\Db::query() (declares #[Effect('slow')]).",
+                41,
+            ],
+        ]);
+    }
+
     public function testEffectAndEffectFreeOnSameMethodIsAContradiction(): void
     {
         $this->analyse([__DIR__ . '/data/contradiction.php'], [

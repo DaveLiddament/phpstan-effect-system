@@ -18,6 +18,7 @@ final class ContractOrigin
     private function __construct(
         public readonly string $kind,
         public readonly ?string $inheritedFrom,
+        public readonly ?string $inheritedVia,
         public readonly ?string $classPattern,
         public readonly ?string $methodPattern,
     ) {
@@ -25,16 +26,21 @@ final class ContractOrigin
 
     public static function own(): self
     {
-        return new self(self::KIND_OWN, null, null, null);
+        return new self(self::KIND_OWN, null, null, null, null);
     }
 
-    public static function inheritedFrom(string $ancestorDisplayName): self
+    /**
+     * @param string|null $viaClassDisplayName set when the method's own class
+     *        is unrelated to the contract: a subclass pairs the inherited
+     *        method with the ancestor that declares the contract
+     */
+    public static function inheritedFrom(string $ancestorDisplayName, ?string $viaClassDisplayName = null): self
     {
-        return new self(self::KIND_INHERITED, $ancestorDisplayName, null, null);
+        return new self(self::KIND_INHERITED, $ancestorDisplayName, $viaClassDisplayName, null, null);
     }
 
     public static function fromPatternRule(string $classPattern, string $methodPattern): self
     {
-        return new self(self::KIND_RULE, null, $classPattern, $methodPattern);
+        return new self(self::KIND_RULE, null, null, $classPattern, $methodPattern);
     }
 }

@@ -65,7 +65,8 @@ final class EffectSystemRule implements Rule
 
         $declarations = $this->buildDeclarations($node);
         $hierarchy = $this->buildHierarchy($node);
-        $graph = $this->buildGraph($node, $hierarchy, $declarations);
+        $graphBuilder = new CallGraphBuilder($this->config->excludeImplementationsFrom);
+        $graph = $this->buildGraph($node, $hierarchy, $declarations, $graphBuilder);
 
         $declared = [];
         $handles = [];
@@ -80,7 +81,7 @@ final class EffectSystemRule implements Rule
         }
 
         $effects = (new EffectPropagator())->propagate($graph, $declared, $handles);
-        $contracts = $this->collectContracts($declarations, $hierarchy);
+        $contracts = $this->collectContracts($declarations, $hierarchy, $graphBuilder);
 
         return $this->buildErrors($declarations, $graph, $contracts, $effects, $declared);
     }
@@ -117,7 +118,7 @@ final class EffectSystemRule implements Rule
         return ClassHierarchy::fromCollectedRecords($records);
     }
 
-    private function buildGraph(CollectedDataNode $node, ClassHierarchy $hierarchy, Declarations $declarations): CallGraph
+    private function buildGraph(CollectedDataNode $node, ClassHierarchy $hierarchy, Declarations $declarations, CallGraphBuilder $graphBuilder): CallGraph
     {
         $callRecords = [];
         foreach ([CallCollector::class, FirstClassCallableCollector::class] as $collectorClass) {
@@ -128,7 +129,7 @@ final class EffectSystemRule implements Rule
             }
         }
 
-        return (new CallGraphBuilder($this->config->excludeImplementationsFrom))->build($callRecords, $hierarchy, $declarations);
+        return $graphBuilder->build($callRecords, $hierarchy, $declarations);
     }
 
     /**
@@ -139,7 +140,7 @@ final class EffectSystemRule implements Rule
      *
      * @return array<string, array<string, ContractOrigin>> key => effect => origin
      */
-    private function collectContracts(Declarations $declarations, ClassHierarchy $hierarchy): array
+    private function collectContracts(Declarations $declarations, ClassHierarchy $hierarchy, CallGraphBuilder $graphBuilder): array
     {
         $contracts = [];
         foreach ($declarations->all() as $key => $record) {
@@ -160,7 +161,9 @@ final class EffectSystemRule implements Rule
                     continue;
                 }
                 $ancestorRecord = $declarations->get($ancestorKey);
-                if ($ancestorRecord === null) {
+                if ($ancestorRecord === null || $ancestorRecord->private) {
+                    // Private methods are invisible to subclasses: a method of
+                    // the same name is not an override.
                     continue;
                 }
                 foreach ($ancestorRecord->effectFree as $effect) {
@@ -169,6 +172,36 @@ final class EffectSystemRule implements Rule
                         continue;
                     }
                     $contracts[$key][$effect] = ContractOrigin::inheritedFrom($ancestorRecord->displayName());
+                }
+            }
+        }
+
+        // A class can fulfil an ancestor's contract with a method it merely
+        // inherits (class Child extends Base implements Runner, with run()
+        // declared only in Base). Base is unrelated to Runner, so the loop
+        // above never pairs them: pair them through each class that is. Test
+        // doubles are skipped, so they cannot impose contracts on production
+        // code any more than they contribute effects to it.
+        foreach ($hierarchy->classNames() as $classLower => $classDisplayName) {
+            if ($graphBuilder->isExcluded($classLower)) {
+                continue;
+            }
+            foreach ($hierarchy->ancestorsOf($classLower) as $ancestor) {
+                foreach ($declarations->methodKeysOfClass($ancestor) as $methodLower => $ancestorKey) {
+                    $ancestorRecord = $declarations->get($ancestorKey);
+                    if ($ancestorRecord === null || $ancestorRecord->private || $ancestorRecord->effectFree === []) {
+                        continue;
+                    }
+                    $implementationKey = $hierarchy->resolveImplementation($declarations, $classLower, $methodLower);
+                    if ($implementationKey === null || $implementationKey === $ancestorKey) {
+                        continue;
+                    }
+                    foreach ($ancestorRecord->effectFree as $effect) {
+                        if (isset($contracts[$implementationKey][$effect])) {
+                            continue;
+                        }
+                        $contracts[$implementationKey][$effect] = ContractOrigin::inheritedFrom($ancestorRecord->displayName(), $classDisplayName);
+                    }
                 }
             }
         }
@@ -314,7 +347,9 @@ final class EffectSystemRule implements Rule
     private function contractDescription(string $effect, ContractOrigin $origin): string
     {
         return match ($origin->kind) {
-            ContractOrigin::KIND_INHERITED => sprintf("is #[EffectFree('%s')] (inherited from %s)", $effect, $origin->inheritedFrom),
+            ContractOrigin::KIND_INHERITED => $origin->inheritedVia !== null
+                ? sprintf("is #[EffectFree('%s')] (inherited from %s via %s)", $effect, $origin->inheritedFrom, $origin->inheritedVia)
+                : sprintf("is #[EffectFree('%s')] (inherited from %s)", $effect, $origin->inheritedFrom),
             ContractOrigin::KIND_RULE => sprintf(
                 "is required to be effect-free for '%s' by the effects rule (classPattern: '%s', methodPattern: '%s')",
                 $effect,

@@ -21,11 +21,12 @@ final class DeclarationRecord
         public readonly array $effectFree,
         public readonly array $handles,
         public readonly bool $abstract,
+        public readonly bool $private = false,
     ) {
     }
 
     /**
-     * @param array{key: string, class: string|null, name: string, file: string|null, line: int|null, effects: list<string>, effectFree: list<string>, handles: list<string>, abstract: bool} $data
+     * @param array{key: string, class: string|null, name: string, file: string|null, line: int|null, effects: list<string>, effectFree: list<string>, handles: list<string>, abstract: bool, private: bool} $data
      */
     public static function fromCollectedArray(array $data): self
     {
@@ -39,6 +40,7 @@ final class DeclarationRecord
             $data['effectFree'],
             $data['handles'],
             $data['abstract'],
+            $data['private'],
         );
     }
 

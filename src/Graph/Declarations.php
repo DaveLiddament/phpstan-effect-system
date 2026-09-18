@@ -45,6 +45,12 @@ final class Declarations
         return $this->byClass[$classLower][$methodLower] ?? null;
     }
 
+    /** @return array<string, string> method (lowercase) => key */
+    public function methodKeysOfClass(string $classLower): array
+    {
+        return $this->byClass[$classLower] ?? [];
+    }
+
     public function displayName(string $key): string
     {
         $record = $this->records[$key] ?? null;

@@ -55,7 +55,7 @@ final class CallGraphBuilder
         return $graph;
     }
 
-    private function isExcluded(string $classLower): bool
+    public function isExcluded(string $classLower): bool
     {
         foreach ($this->excludeImplementationsFrom as $pattern) {
             // FNM_NOESCAPE is essential: without it the backslashes in

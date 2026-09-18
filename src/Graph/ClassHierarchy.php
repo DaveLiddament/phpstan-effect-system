@@ -10,7 +10,7 @@ namespace DaveLiddament\PhpstanEffectSystem\Graph;
  */
 final class ClassHierarchy
 {
-    /** @var array<string, array{parents: list<string>, interfaces: list<string>}> classLower => record */
+    /** @var array<string, array{name: string, parents: list<string>, interfaces: list<string>}> classLower => record */
     private array $classes = [];
 
     /** @var array<string, list<string>> ancestorLower => subtype classLower list */
@@ -37,13 +37,22 @@ final class ClassHierarchy
                 $record['interfaces'],
             );
 
-            $hierarchy->classes[$classLower] = ['parents' => $parents, 'interfaces' => $interfaces];
+            $hierarchy->classes[$classLower] = ['name' => ltrim($record['class'], '\\'), 'parents' => $parents, 'interfaces' => $interfaces];
             foreach ([...$parents, ...$interfaces] as $ancestor) {
                 $hierarchy->subtypes[$ancestor][] = $classLower;
             }
         }
 
         return $hierarchy;
+    }
+
+    /** @return array<string, string> every known class: classLower => display name, sorted for determinism */
+    public function classNames(): array
+    {
+        $names = array_map(static fn (array $record): string => $record['name'], $this->classes);
+        ksort($names, SORT_STRING);
+
+        return $names;
     }
 
     /** @return list<string> transitive subtypes (lowercase), excluding the class itself */
