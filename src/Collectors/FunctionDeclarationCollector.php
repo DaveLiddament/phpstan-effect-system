@@ -13,7 +13,7 @@ use PHPStan\Node\InFunctionNode;
 /**
  * Records every free-function declaration.
  *
- * @implements Collector<InFunctionNode, array{key: string, class: null, name: string, file: string, line: int, effects: list<string>, effectFree: list<string>, handles: list<string>, private: bool}>
+ * @implements Collector<InFunctionNode, array{key: string, class: null, name: string, file: string, line: int, effects: list<string>, effectFree: list<string>, handles: list<string>, private: bool, abstract: bool}>
  */
 final class FunctionDeclarationCollector implements Collector
 {
@@ -42,6 +42,7 @@ final class FunctionDeclarationCollector implements Collector
             'effectFree' => $attributes['effectFree'],
             'handles' => $attributes['handles'],
             'private' => false,
+            'abstract' => false,
         ];
     }
 }

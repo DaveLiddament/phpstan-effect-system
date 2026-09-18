@@ -137,10 +137,16 @@ cache is still slow enough to matter), that effect would still propagate.
   extends Base implements Runner`, with `run()` declared only in `Base`):
   the error is reported on `Base::run()`, naming `Child` as the link. Private
   methods never inherit a contract — a same-named method in a subclass is not
-  an override. Constructors **do** inherit: `#[EffectFree('slow')]` on a
-  parent's `__construct()` binds every subclass constructor, even though PHP
-  itself does not require constructors to be compatible. This is deliberately
-  strict — read it as "nothing in this hierarchy may be slow to construct".
+  an override. Constructors do **not** inherit either: `new Child()` always
+  names the concrete class, so nobody constructs a `Child` relying on what
+  `Base::__construct()` promised, and PHP itself exempts constructors from
+  compatibility checks. The exception is a constructor declared on an
+  interface or as `abstract` — PHP enforces that signature on every
+  implementation, and the contract is inherited with it. To keep a whole
+  hierarchy cheap to construct, use a pattern rule instead
+  (`classPattern: 'App\Entity\*', methodPattern: '__construct'`). A
+  `new static()` factory is still covered: the factory's own contract reaches
+  subclass constructors through dispatch.
 - **Contradiction** — declaring `Effect('x')` on a method whose own or
   inherited contracts include `EffectFree('x')` is a dedicated error.
 - **Dynamic dispatch** — a call through an interface/abstract/parent type is

@@ -23,8 +23,9 @@ class Entity
     }
 }
 
-// Constructors are treated like any other override: the parent's contract
-// covers the whole hierarchy.
+// Not reported: `new SlowEntity()` always names the concrete class, so nobody
+// constructs it believing they get Entity's constructor. PHP itself exempts
+// constructors from compatibility checks for the same reason.
 class SlowEntity extends Entity
 {
     public function __construct()
@@ -33,9 +34,33 @@ class SlowEntity extends Entity
     }
 }
 
-class FastEntity extends Entity
+// An interface constructor IS a promise PHP enforces on every implementation,
+// so its contract is inherited.
+interface Buildable
+{
+    #[EffectFree('slow')]
+    public function __construct();
+}
+
+class SlowBuildable implements Buildable
 {
     public function __construct()
     {
+        (new Db())->query();
+    }
+}
+
+// Likewise for an abstract constructor.
+abstract class Template
+{
+    #[EffectFree('slow')]
+    abstract public function __construct();
+}
+
+class SlowTemplate extends Template
+{
+    public function __construct()
+    {
+        (new Db())->query();
     }
 }

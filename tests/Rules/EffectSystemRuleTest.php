@@ -174,12 +174,16 @@ final class EffectSystemRuleTest extends EffectSystemRuleTestCase
         ]);
     }
 
-    public function testConstructorsInheritContractsLikeAnyOtherOverride(): void
+    public function testOnlyInterfaceAndAbstractConstructorsPassOnTheirContract(): void
     {
         $this->analyse([__DIR__ . '/data/constructor-contract.php'], [
             [
-                "Method EffectTest\\ConstructorContract\\SlowEntity::__construct() is #[EffectFree('slow')] (inherited from EffectTest\\ConstructorContract\\Entity::__construct()) but reaches effect 'slow': EffectTest\\ConstructorContract\\SlowEntity::__construct() -> EffectTest\\ConstructorContract\\Db::query() (declares #[Effect('slow')]).",
-                30,
+                "Method EffectTest\\ConstructorContract\\SlowBuildable::__construct() is #[EffectFree('slow')] (inherited from EffectTest\\ConstructorContract\\Buildable::__construct()) but reaches effect 'slow': EffectTest\\ConstructorContract\\SlowBuildable::__construct() -> EffectTest\\ConstructorContract\\Db::query() (declares #[Effect('slow')]).",
+                47,
+            ],
+            [
+                "Method EffectTest\\ConstructorContract\\SlowTemplate::__construct() is #[EffectFree('slow')] (inherited from EffectTest\\ConstructorContract\\Template::__construct()) but reaches effect 'slow': EffectTest\\ConstructorContract\\SlowTemplate::__construct() -> EffectTest\\ConstructorContract\\Db::query() (declares #[Effect('slow')]).",
+                62,
             ],
         ]);
     }

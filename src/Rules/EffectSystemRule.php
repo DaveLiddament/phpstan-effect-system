@@ -163,9 +163,7 @@ final class EffectSystemRule implements Rule
                     continue;
                 }
                 $ancestorRecord = $declarations->get($ancestorKey);
-                if ($ancestorRecord === null || $ancestorRecord->private) {
-                    // Private methods are invisible to subclasses: a method of
-                    // the same name is not an override.
+                if ($ancestorRecord === null || !$ancestorRecord->passesContractToOverrides()) {
                     continue;
                 }
                 foreach ($ancestorRecord->effectFree as $effect) {
@@ -191,7 +189,7 @@ final class EffectSystemRule implements Rule
             foreach ($hierarchy->ancestorsOf($classLower) as $ancestor) {
                 foreach ($declarations->methodKeysOfClass($ancestor) as $methodLower => $ancestorKey) {
                     $ancestorRecord = $declarations->get($ancestorKey);
-                    if ($ancestorRecord === null || $ancestorRecord->private || $ancestorRecord->effectFree === []) {
+                    if ($ancestorRecord === null || !$ancestorRecord->passesContractToOverrides() || $ancestorRecord->effectFree === []) {
                         continue;
                     }
                     $implementationKey = $hierarchy->resolveImplementation($declarations, $classLower, $methodLower);
