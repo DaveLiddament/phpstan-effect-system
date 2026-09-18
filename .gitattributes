@@ -1,0 +1,12 @@
+# Keep the Composer dist archive lean: only src/, extension.neon,
+# composer.json, README.md and LICENSE.md are shipped.
+/.github            export-ignore
+/tests              export-ignore
+/.gitattributes     export-ignore
+/.gitignore         export-ignore
+/CLAUDE.md          export-ignore
+/Dockerfile         export-ignore
+/docker-compose.yml export-ignore
+/phpstan.neon.dist  export-ignore
+/phpunit.xml        export-ignore
+/composer.lock      export-ignore
