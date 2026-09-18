@@ -4,8 +4,9 @@
     "type": "phpstan-extension",
     "keywords": ["phpstan", "phpstan-extension", "static analysis", "effects"],
     "require-dev": {
-        "phpstan/phpstan": "^2.2",
-        "phpunit/phpunit": "^13.2"
+        "phpunit/phpunit": "^13.2",
+        "phpstan/phpstan-strict-rules": "^2.0",
+        "phpstan/phpstan-deprecation-rules": "^2.0"
     },
     "license": "MIT",
     "autoload": {
@@ -28,7 +29,8 @@
         }
     ],
     "require": {
-        "php": ">=8.4"
+        "php": ">=8.4",
+        "phpstan/phpstan": "^2.2"
     },
     "extra": {
         "phpstan": {

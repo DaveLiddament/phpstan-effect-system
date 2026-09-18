@@ -66,9 +66,10 @@ includes:
     - vendor/dave-liddament/phpstan-effect-system/extension.neon
 ```
 
-The attribute classes have zero dependencies. Installing the package in
-`require-dev` is safe even though the attributes appear in production code:
-PHP never autoloads an attribute class unless something reflects on it.
+The package requires `phpstan/phpstan`, so install it in `require-dev`. That
+is safe even though the attributes appear in production code: the attribute
+classes themselves have zero dependencies, and PHP never autoloads an attribute
+class unless something reflects on it.
 
 Requires PHP >= 8.4 and PHPStan 2.x.
 
