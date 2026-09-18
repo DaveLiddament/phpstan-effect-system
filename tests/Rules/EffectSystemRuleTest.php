@@ -174,6 +174,16 @@ final class EffectSystemRuleTest extends EffectSystemRuleTestCase
         ]);
     }
 
+    public function testConstructorsInheritContractsLikeAnyOtherOverride(): void
+    {
+        $this->analyse([__DIR__ . '/data/constructor-contract.php'], [
+            [
+                "Method EffectTest\\ConstructorContract\\SlowEntity::__construct() is #[EffectFree('slow')] (inherited from EffectTest\\ConstructorContract\\Entity::__construct()) but reaches effect 'slow': EffectTest\\ConstructorContract\\SlowEntity::__construct() -> EffectTest\\ConstructorContract\\Db::query() (declares #[Effect('slow')]).",
+                30,
+            ],
+        ]);
+    }
+
     public function testLateStaticBindingAndClassStringCallsDispatchToSubclasses(): void
     {
         $this->analyse([__DIR__ . '/data/late-static-binding.php'], [
