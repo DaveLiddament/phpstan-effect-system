@@ -237,6 +237,14 @@ final class EffectSystemRuleTest extends EffectSystemRuleTestCase
                 "Method EffectTest\\FirstClassCallable\\Api::handle() is #[EffectFree('slow')] but reaches effect 'slow': EffectTest\\FirstClassCallable\\Api::handle() -> EffectTest\\FirstClassCallable\\Db::query() (declares #[Effect('slow')]).",
                 20,
             ],
+            [
+                "Method EffectTest\\FirstClassCallable\\StaticAndFunctionApi::viaStaticMethod() is #[EffectFree('slow')] but reaches effect 'slow': EffectTest\\FirstClassCallable\\StaticAndFunctionApi::viaStaticMethod() -> EffectTest\\FirstClassCallable\\StaticDb::query() (declares #[Effect('slow')]).",
+                42,
+            ],
+            [
+                "Method EffectTest\\FirstClassCallable\\StaticAndFunctionApi::viaFunction() is #[EffectFree('slow')] but reaches effect 'slow': EffectTest\\FirstClassCallable\\StaticAndFunctionApi::viaFunction() -> EffectTest\\FirstClassCallable\\slowFunction() (declares #[Effect('slow')]).",
+                48,
+            ],
         ]);
     }
 

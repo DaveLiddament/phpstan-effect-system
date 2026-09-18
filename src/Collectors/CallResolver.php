@@ -9,7 +9,7 @@ use PhpParser\Node;
 use PhpParser\Node\Expr;
 use PhpParser\Node\Expr\New_;
 use PHPStan\Analyser\Scope;
-use PHPStan\Reflection\Php\PhpMethodFromParserNodeReflection;
+use PHPStan\Reflection\MethodReflection;
 use PHPStan\Reflection\ReflectionProvider;
 
 /**
@@ -32,15 +32,32 @@ final class CallResolver
             return null;
         }
 
-        if ($function instanceof PhpMethodFromParserNodeReflection) {
-            if ($function->isPropertyHook()) {
-                return null;
-            }
-
+        if ($function instanceof MethodReflection) {
+            // Property hooks land here too, under a '$property::hook' name no
+            // call can ever target: their edges are inert, which is how the
+            // documented "hooks are not tracked" limitation is kept.
             return MethodKey::forMethod($function->getDeclaringClass()->getName(), $function->getName());
         }
 
         return MethodKey::forFunction($function->getName());
+    }
+
+    /**
+     * @param list<Callee> $callees
+     * @return array{caller: string, line: int, callees: list<Callee>}|null
+     */
+    public function buildRecord(Scope $scope, int $line, array $callees): ?array
+    {
+        if ($callees === []) {
+            return null;
+        }
+
+        $caller = $this->resolveCaller($scope);
+        if ($caller === null) {
+            return null;
+        }
+
+        return ['caller' => $caller, 'line' => $line, 'callees' => $callees];
     }
 
     /**

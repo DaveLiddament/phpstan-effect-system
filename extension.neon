@@ -40,7 +40,15 @@ services:
 		tags:
 			- phpstan.collector
 	-
-		class: DaveLiddament\PhpstanEffectSystem\Collectors\FirstClassCallableCollector
+		class: DaveLiddament\PhpstanEffectSystem\Collectors\MethodCallableCollector
+		tags:
+			- phpstan.collector
+	-
+		class: DaveLiddament\PhpstanEffectSystem\Collectors\StaticMethodCallableCollector
+		tags:
+			- phpstan.collector
+	-
+		class: DaveLiddament\PhpstanEffectSystem\Collectors\FunctionCallableCollector
 		tags:
 			- phpstan.collector
 	-

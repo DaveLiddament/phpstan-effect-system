@@ -9,8 +9,3 @@ parameters:
 	excludePaths:
 		- tests/Rules/data
 		- tests/EndToEnd/fixture
-	ignoreErrors:
-		# Detecting first-class-callable virtual nodes and distinguishing
-		# method from function reflections requires instanceof on PHPStan
-		# classes; the BC risk is accepted.
-		- identifier: phpstanApi.instanceofAssumption

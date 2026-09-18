@@ -22,7 +22,7 @@ use PHPStan\Collectors\Collector;
  * types) are skipped — documented false negatives.
  *
  * First-class callables never reach this collector: PHPStan replaces them
- * with virtual nodes handled by FirstClassCallableCollector.
+ * with virtual nodes handled by the *CallableCollector classes.
  *
  * @implements Collector<CallLike, array{caller: string, line: int, callees: list<array{key: string, calledClass: string|null, method: string|null, dispatch: bool}>}>
  */
@@ -40,11 +40,6 @@ final class CallCollector implements Collector
 
     public function processNode(Node $node, Scope $scope): ?array
     {
-        $caller = $this->callResolver->resolveCaller($scope);
-        if ($caller === null) {
-            return null;
-        }
-
         if ($node instanceof MethodCall || $node instanceof NullsafeMethodCall) {
             $callees = $this->callResolver->resolveMethodCallees($node->var, $node->name, $scope);
         } elseif ($node instanceof StaticCall) {
@@ -57,14 +52,6 @@ final class CallCollector implements Collector
             $callees = [];
         }
 
-        if ($callees === []) {
-            return null;
-        }
-
-        return [
-            'caller' => $caller,
-            'line' => $node->getStartLine(),
-            'callees' => $callees,
-        ];
+        return $this->callResolver->buildRecord($scope, $node->getStartLine(), $callees);
     }
 }

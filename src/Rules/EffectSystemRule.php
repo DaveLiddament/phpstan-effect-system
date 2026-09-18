@@ -6,9 +6,11 @@ namespace DaveLiddament\PhpstanEffectSystem\Rules;
 
 use DaveLiddament\PhpstanEffectSystem\Collectors\CallCollector;
 use DaveLiddament\PhpstanEffectSystem\Collectors\ClassHierarchyCollector;
-use DaveLiddament\PhpstanEffectSystem\Collectors\FirstClassCallableCollector;
+use DaveLiddament\PhpstanEffectSystem\Collectors\FunctionCallableCollector;
 use DaveLiddament\PhpstanEffectSystem\Collectors\FunctionDeclarationCollector;
+use DaveLiddament\PhpstanEffectSystem\Collectors\MethodCallableCollector;
 use DaveLiddament\PhpstanEffectSystem\Collectors\MethodDeclarationCollector;
+use DaveLiddament\PhpstanEffectSystem\Collectors\StaticMethodCallableCollector;
 use DaveLiddament\PhpstanEffectSystem\Config\EffectsConfig;
 use DaveLiddament\PhpstanEffectSystem\Graph\CallGraph;
 use DaveLiddament\PhpstanEffectSystem\Graph\CallGraphBuilder;
@@ -121,7 +123,7 @@ final class EffectSystemRule implements Rule
     private function buildGraph(CollectedDataNode $node, ClassHierarchy $hierarchy, Declarations $declarations, CallGraphBuilder $graphBuilder): CallGraph
     {
         $callRecords = [];
-        foreach ([CallCollector::class, FirstClassCallableCollector::class] as $collectorClass) {
+        foreach ([CallCollector::class, MethodCallableCollector::class, StaticMethodCallableCollector::class, FunctionCallableCollector::class] as $collectorClass) {
             foreach ($node->get($collectorClass) as $fileRecords) {
                 foreach ($fileRecords as $record) {
                     $callRecords[] = $record;

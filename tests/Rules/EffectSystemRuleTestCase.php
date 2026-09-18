@@ -8,9 +8,11 @@ use DaveLiddament\PhpstanEffectSystem\Collectors\CallCollector;
 use DaveLiddament\PhpstanEffectSystem\Collectors\CallResolver;
 use DaveLiddament\PhpstanEffectSystem\Collectors\ClassHierarchyCollector;
 use DaveLiddament\PhpstanEffectSystem\Collectors\EffectAttributeReader;
-use DaveLiddament\PhpstanEffectSystem\Collectors\FirstClassCallableCollector;
+use DaveLiddament\PhpstanEffectSystem\Collectors\FunctionCallableCollector;
 use DaveLiddament\PhpstanEffectSystem\Collectors\FunctionDeclarationCollector;
+use DaveLiddament\PhpstanEffectSystem\Collectors\MethodCallableCollector;
 use DaveLiddament\PhpstanEffectSystem\Collectors\MethodDeclarationCollector;
+use DaveLiddament\PhpstanEffectSystem\Collectors\StaticMethodCallableCollector;
 use DaveLiddament\PhpstanEffectSystem\Rules\EffectSystemRule;
 use PHPStan\Testing\RuleTestCase;
 
@@ -28,7 +30,9 @@ abstract class EffectSystemRuleTestCase extends RuleTestCase
             new MethodDeclarationCollector($reader),
             new FunctionDeclarationCollector($reader),
             new CallCollector($resolver),
-            new FirstClassCallableCollector($resolver),
+            new MethodCallableCollector($resolver),
+            new StaticMethodCallableCollector($resolver),
+            new FunctionCallableCollector($resolver),
             new ClassHierarchyCollector(),
         ];
     }
