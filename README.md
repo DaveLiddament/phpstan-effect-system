@@ -31,10 +31,10 @@ class OrderService
 
 class HomeController
 {
-    #[EffectFree('slow')]             // the sink: must never reach 'slow'
+    #[EffectFree('slow')]             // the sink: must never reach 'slow' — ERROR reported here
     public function indexAction(): void
     {
-        (new OrderService())->load(); // ERROR reported here
+        (new OrderService())->load();
     }
 }
 ```
@@ -131,7 +131,12 @@ cache is still slow enough to matter), that effect would still propagate.
   not cancel an `Effect` of the same name declared on the same method.
 - **EffectFree inheritance** — a contract on an interface or parent method
   applies to every implementation/override; there is no syntax to drop it.
-  Violations are reported at the implementation.
+  Violations are reported at the implementation. This includes a method
+  inherited from a parent that is unrelated to the interface (`class Child
+  extends Base implements Runner`, with `run()` declared only in `Base`):
+  the error is reported on `Base::run()`, naming `Child` as the link. Private
+  methods never inherit a contract — a same-named method in a subclass is not
+  an override.
 - **Contradiction** — declaring `Effect('x')` on a method whose own or
   inherited contracts include `EffectFree('x')` is a dedicated error.
 - **Dynamic dispatch** — a call through an interface/abstract/parent type is
@@ -147,6 +152,9 @@ cache is still slow enough to matter), that effect would still propagate.
 - **Traits** — trait methods are analysed per using class; effects and
   contracts apply per class.
 - **Constructors** — `new Foo()` is an edge to `Foo::__construct()`.
+- **Late static binding** — `static::method()`, `new static()`,
+  `$object::method()`, `$classString::method()` and `new $classString()` are
+  expanded over all known subclasses, like any other dynamic dispatch.
 
 ## Configuration
 
@@ -206,8 +214,17 @@ adding `#[Effect]` to a leaf re-reports at distant sinks on the next run
 without a full re-analysis (covered by an end-to-end test).
 
 Because the analysis is closed-world, results are only correct when the whole
-project is analysed. Partial analysis (e.g. single-file editor runs) reports
-nothing rather than under-reporting silently.
+project is analysed. When PHPStan is given individual files (e.g. single-file
+editor runs, `phpstan analyse src/Foo.php`) the extension reports nothing
+rather than under-reporting silently. It **cannot** detect a run restricted to
+a sub-directory (`phpstan analyse src/Controller`): such a run only sees the
+calls, implementations and effects inside that directory and will silently
+miss violations. Always run it over the full configured `paths`.
+
+Errors are reported on the first line of the sink's declaration, which is the
+first attribute line when the method has attributes — that is where a
+`@phpstan-ignore effects.violation` comment has to go (above the attributes,
+not between them and the `function` keyword).
 
 ## Comparison with adjacent tools
 
@@ -238,8 +255,19 @@ nothing rather than under-reporting silently.
 
 Not tracked — these are silent false negatives, by design:
 
-- Variable and string callables (`$fn()`, `call_user_func('foo')`), container
-  dispatch (`$container->get(X::class)->run()`).
+- Variable, string and array callables (`$fn()`, `call_user_func('foo')`,
+  `array_map([$obj, 'method'], ...)`), container dispatch
+  (`$container->get(X::class)->run()`).
+- Calls on receivers PHPStan has no class type for (untyped properties and
+  parameters, `mixed`, `object`). The better typed the code, the more complete
+  the call graph.
+- Implicit calls: `__invoke` (`$obj()`), `__toString`, `__get`/`__set`,
+  `__call`/`__callStatic` (including `@method`-annotated magic methods),
+  `__destruct`, `__clone`, `ArrayAccess`, iterators.
+- `new` expressions in parameter default values.
+- Vendor implementations of an interface: dispatch is only expanded over
+  analysed classes, so a call through a vendor interface needs the stub on
+  the interface method itself.
 - Reflection-based invocation.
 - Code in the global scope (outside any function/method).
 - Property hooks (PHP 8.4).
