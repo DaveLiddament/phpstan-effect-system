@@ -38,7 +38,7 @@ final class EffectsConfigTest extends TestCase
     public function testStubWithBothMethodAndFunctionIsRejected(): void
     {
         $this->expectException(InvalidArgumentException::class);
-        $this->expectExceptionMessage('exactly one of "method" or "function"');
+        $this->expectExceptionMessageIsOrContains('exactly one of "method" or "function"');
 
         EffectsConfig::fromParameters(
             [['method' => 'A::b', 'function' => 'c', 'effects' => ['io']]],
@@ -51,7 +51,7 @@ final class EffectsConfigTest extends TestCase
     public function testStubMethodWithoutClassSeparatorIsRejected(): void
     {
         $this->expectException(InvalidArgumentException::class);
-        $this->expectExceptionMessage('"Fully\Qualified\ClassName::methodName"');
+        $this->expectExceptionMessageIsOrContains('"Fully\Qualified\ClassName::methodName"');
 
         EffectsConfig::fromParameters(
             [['method' => 'justAMethodName', 'effects' => ['io']]],
@@ -64,7 +64,7 @@ final class EffectsConfigTest extends TestCase
     public function testStubWithoutEffectsIsRejected(): void
     {
         $this->expectException(InvalidArgumentException::class);
-        $this->expectExceptionMessage('at least one effect');
+        $this->expectExceptionMessageIsOrContains('at least one effect');
 
         EffectsConfig::fromParameters(
             [['method' => 'A::b', 'effects' => []]],
@@ -77,7 +77,7 @@ final class EffectsConfigTest extends TestCase
     public function testStubEffectOutsideAllowedEffectsIsRejected(): void
     {
         $this->expectException(InvalidArgumentException::class);
-        $this->expectExceptionMessage("unknown effect 'htpp'");
+        $this->expectExceptionMessageIsOrContains("unknown effect 'htpp'");
 
         EffectsConfig::fromParameters(
             [['method' => 'A::b', 'effects' => ['htpp']]],
@@ -90,7 +90,7 @@ final class EffectsConfigTest extends TestCase
     public function testRuleWithEmptyEffectFreeIsRejected(): void
     {
         $this->expectException(InvalidArgumentException::class);
-        $this->expectExceptionMessage('at least one effect in "effectFree"');
+        $this->expectExceptionMessageIsOrContains('at least one effect in "effectFree"');
 
         EffectsConfig::fromParameters(
             [],
@@ -103,7 +103,7 @@ final class EffectsConfigTest extends TestCase
     public function testRuleEffectOutsideAllowedEffectsIsRejected(): void
     {
         $this->expectException(InvalidArgumentException::class);
-        $this->expectExceptionMessage("unknown effect 'slwo'");
+        $this->expectExceptionMessageIsOrContains("unknown effect 'slwo'");
 
         EffectsConfig::fromParameters(
             [],

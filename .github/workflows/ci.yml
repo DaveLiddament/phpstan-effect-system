@@ -7,17 +7,15 @@ on:
 
 jobs:
   tests:
-    name: Tests (PHP ${{ matrix.php }}, ${{ matrix.dependency-versions }} deps)
+    name: Tests and PHPStan (PHP ${{ matrix.php }}, ${{ matrix.dependency-versions }} deps)
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
       matrix:
-        # PHPUnit resolves per PHP version: 8.3 -> ^12, 8.4+ -> ^13.
-        # The suite is compatible with both.
-        php: ['8.3', '8.4', '8.5']
+        php: ['8.4', '8.5']
         dependency-versions: [highest]
         include:
-          - php: '8.3'
+          - php: '8.4'
             dependency-versions: lowest
     steps:
       - name: Checkout
@@ -32,15 +30,18 @@ jobs:
       - name: Install dependencies
         uses: ramsey/composer-install@v3
         with:
-          # 'highest' runs composer update, so each PHP version resolves its
-          # own dependency set instead of failing on the committed lock file.
+          # 'highest' runs composer update, so the matrix tests against the
+          # newest PHPStan/PHPUnit rather than the committed lock file.
           dependency-versions: ${{ matrix.dependency-versions }}
 
       - name: Run tests
         run: vendor/bin/phpunit
 
-  static-analysis:
-    name: Static analysis
+      - name: PHPStan
+        run: vendor/bin/phpstan analyse --memory-limit=1G --no-progress
+
+  composer-validate:
+    name: Validate composer.json
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -54,9 +55,3 @@ jobs:
 
       - name: Validate composer.json
         run: composer validate --strict
-
-      - name: Install dependencies
-        uses: ramsey/composer-install@v3
-
-      - name: PHPStan
-        run: vendor/bin/phpstan analyse --memory-limit=1G --no-progress
