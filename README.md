@@ -71,7 +71,8 @@ is safe even though the attributes appear in production code: the attribute
 classes themselves have zero dependencies, and PHP never autoloads an attribute
 class unless something reflects on it.
 
-Requires PHP >= 8.4 and PHPStan 2.x.
+Requires PHP 8.4 or 8.5, and PHPStan 2.x. Each new PHP version is added once
+it has been released and the test suite passes on it.
 
 ## The attributes
 
