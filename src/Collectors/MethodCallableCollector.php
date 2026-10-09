@@ -18,7 +18,7 @@ use PHPStan\Node\MethodCallableNode;
  * virtual nodes before rules/collectors run, so they never reach
  * CallCollector.
  *
- * @implements Collector<MethodCallableNode, array{caller: string, callees: list<array{key: string, calledClass: string|null, method: string|null, dispatch: bool}>}>
+ * @implements Collector<MethodCallableNode, string>
  */
 final class MethodCallableCollector implements Collector
 {
@@ -32,7 +32,7 @@ final class MethodCallableCollector implements Collector
         return MethodCallableNode::class;
     }
 
-    public function processNode(Node $node, Scope $scope): ?array
+    public function processNode(Node $node, Scope $scope): ?string
     {
         $callees = $this->callResolver->resolveMethodCallees($node->getVar(), $node->getName(), $scope);
 

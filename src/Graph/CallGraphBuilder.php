@@ -20,29 +20,32 @@ final class CallGraphBuilder
     }
 
     /**
-     * @param list<array{caller: string, callees: list<array{key: string, calledClass: string|null, method: string|null, dispatch: bool}>}> $callRecords
+     * @param list<string> $callRecords encoded by CallRecord
      */
     public function build(array $callRecords, ClassHierarchy $hierarchy, Declarations $declarations): CallGraph
     {
         $graph = new CallGraph();
         $dispatchTargets = [];
         foreach ($callRecords as $record) {
-            foreach ($record['callees'] as $callee) {
+            $callees = explode("\n", $record);
+            $caller = array_shift($callees);
+            foreach ($callees as $callee) {
+                $parts = explode("\t", $callee);
                 // Direct edge to the declared method: carries effects declared
                 // on interface/abstract methods themselves.
-                $graph->addEdge($record['caller'], $callee['key']);
+                $graph->addEdge($caller, $parts[0]);
 
-                if (!$callee['dispatch'] || $callee['calledClass'] === null || $callee['method'] === null) {
+                if (count($parts) !== 3) {
                     continue;
                 }
 
                 // Closed-world dynamic dispatch: the call may land on any
                 // known subtype's implementation.
-                $calledClassLower = strtolower(ltrim($callee['calledClass'], '\\'));
-                $methodLower = strtolower($callee['method']);
+                $calledClassLower = strtolower(ltrim($parts[1], '\\'));
+                $methodLower = strtolower($parts[2]);
                 $implementationKeys = $dispatchTargets[$calledClassLower . '::' . $methodLower] ??= $this->dispatchTargets($hierarchy, $declarations, $calledClassLower, $methodLower);
                 foreach ($implementationKeys as $implementationKey) {
-                    $graph->addEdge($record['caller'], $implementationKey);
+                    $graph->addEdge($caller, $implementationKey);
                 }
             }
         }
