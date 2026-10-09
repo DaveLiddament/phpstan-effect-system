@@ -25,6 +25,7 @@ final class CallGraphBuilder
     public function build(array $callRecords, ClassHierarchy $hierarchy, Declarations $declarations): CallGraph
     {
         $graph = new CallGraph();
+        $dispatchTargets = [];
         foreach ($callRecords as $record) {
             foreach ($record['callees'] as $callee) {
                 // Direct edge to the declared method: carries effects declared
@@ -39,20 +40,34 @@ final class CallGraphBuilder
                 // known subtype's implementation.
                 $calledClassLower = strtolower(ltrim($callee['calledClass'], '\\'));
                 $methodLower = strtolower($callee['method']);
-                foreach ($hierarchy->subtypesOf($calledClassLower) as $subtype) {
-                    if ($this->isExcluded($subtype)) {
-                        continue;
-                    }
-                    $implementationKey = $hierarchy->resolveImplementation($declarations, $subtype, $methodLower);
-                    if ($implementationKey === null) {
-                        continue;
-                    }
+                $implementationKeys = $dispatchTargets[$calledClassLower . '::' . $methodLower] ??= $this->dispatchTargets($hierarchy, $declarations, $calledClassLower, $methodLower);
+                foreach ($implementationKeys as $implementationKey) {
                     $graph->addEdge($record['caller'], $implementationKey);
                 }
             }
         }
 
         return $graph;
+    }
+
+    /**
+     * @return list<string>
+     */
+    private function dispatchTargets(ClassHierarchy $hierarchy, Declarations $declarations, string $calledClassLower, string $methodLower): array
+    {
+        $implementationKeys = [];
+        foreach ($hierarchy->subtypesOf($calledClassLower) as $subtype) {
+            if ($this->isExcluded($subtype)) {
+                continue;
+            }
+            $implementationKey = $hierarchy->resolveImplementation($declarations, $subtype, $methodLower);
+            if ($implementationKey === null) {
+                continue;
+            }
+            $implementationKeys[] = $implementationKey;
+        }
+
+        return $implementationKeys;
     }
 
     public function isExcluded(string $classLower): bool
