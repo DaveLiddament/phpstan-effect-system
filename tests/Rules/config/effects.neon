@@ -6,4 +6,9 @@ parameters:
 		stubs:
 			- { function: 'file_get_contents', effects: ['io'] }
 			- { method: 'EffectTest\StubVendor\Mailer::send', effects: ['smtp'] }
+		rules:
+			# exclude is optional, and when used it must not be reported as
+			# stale: Service::fetch() matches the rule.
+			- { classPattern: 'EffectTest\Stubs\Service', methodPattern: 'fetch', effectFree: ['io'], exclude: ['EffectTest\Stubs\Service'] }
+			- { classPattern: 'EffectTest\Stubs\NoSuchClass', methodPattern: '*', effectFree: ['io'] }
 		allowedEffects: ['slow', 'io', 'http', 'smtp']

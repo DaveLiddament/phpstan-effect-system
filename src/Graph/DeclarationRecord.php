@@ -10,6 +10,7 @@ final class DeclarationRecord
      * @param list<string> $effects
      * @param list<string> $effectFree
      * @param list<string> $handles
+     * @param list<string> $exemptFromRules effects whose pattern-rule contracts this method is exempt from
      */
     public function __construct(
         public readonly string $key,
@@ -22,11 +23,12 @@ final class DeclarationRecord
         public readonly array $handles,
         public readonly bool $private = false,
         public readonly bool $abstract = false,
+        public readonly array $exemptFromRules = [],
     ) {
     }
 
     /**
-     * @param array{key: string, class: string|null, name: string, file: string|null, line: int|null, effects: list<string>, effectFree: list<string>, handles: list<string>, private: bool, abstract: bool} $data
+     * @param array{key: string, class: string|null, name: string, file: string|null, line: int|null, effects: list<string>, effectFree: list<string>, handles: list<string>, exemptFromRules: list<string>, private: bool, abstract: bool} $data
      */
     public static function fromCollectedArray(array $data): self
     {
@@ -41,6 +43,7 @@ final class DeclarationRecord
             $data['handles'],
             $data['private'],
             $data['abstract'],
+            $data['exemptFromRules'],
         );
     }
 

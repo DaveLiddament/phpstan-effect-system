@@ -39,7 +39,7 @@ final class EffectSystemRule implements Rule
 
     /**
      * @param list<array{method?: string, function?: string, effects?: list<string>}> $stubs
-     * @param list<array{classPattern?: string, methodPattern?: string, effectFree?: list<string>}> $rules
+     * @param list<array{classPattern?: string, methodPattern?: string, effectFree?: list<string>, exclude?: list<string>}> $rules
      * @param list<string> $allowedEffects
      * @param list<string> $excludeImplementationsFrom
      */
@@ -84,8 +84,9 @@ final class EffectSystemRule implements Rule
 
         $effects = (new EffectPropagator())->propagate($graph, $declared, $handles);
         $contracts = $this->collectContracts($declarations, $hierarchy, $graphBuilder);
+        [$contracts, $appliedExemptions, $unusedExclusions] = $this->applyPatternRules($declarations, $contracts);
 
-        return $this->buildErrors($declarations, $graph, $contracts, $effects, $declared);
+        return $this->buildErrors($declarations, $graph, $contracts, $effects, $declared, $appliedExemptions, $unusedExclusions);
     }
 
     private function buildDeclarations(CollectedDataNode $node): Declarations
@@ -135,10 +136,9 @@ final class EffectSystemRule implements Rule
     }
 
     /**
-     * Collects EffectFree contracts per graph key. Contracts cannot be dropped
-     * by overrides; when the same (method, effect) contract arises repeatedly,
-     * the own attribute wins over inherited ones, which win over pattern
-     * rules.
+     * Collects the own and inherited EffectFree contracts per graph key.
+     * Contracts cannot be dropped by overrides; when the same (method, effect)
+     * contract arises repeatedly, the own attribute wins over inherited ones.
      *
      * @return array<string, array<string, ContractOrigin>> key => effect => origin
      */
@@ -206,7 +206,29 @@ final class EffectSystemRule implements Rule
             }
         }
 
+        return $contracts;
+    }
+
+    /**
+     * Adds the contracts imposed by pattern rules, which never replace an own
+     * or inherited contract. Unlike those, a pattern-rule contract is a policy
+     * imposed from outside, so it can be dropped: for classes the rule
+     * excludes, and for methods with #[ExemptFromEffectRule].
+     *
+     * @param array<string, array<string, ContractOrigin>> $contracts
+     * @return array{
+     *     array<string, array<string, ContractOrigin>>,
+     *     array<string, array<string, true>>,
+     *     list<array{classPattern: string, methodPattern: string, exclude: string}>,
+     * } contracts, the exemptions that dropped a contract (key => effect), and
+     *   the exclude patterns that matched nothing the rule covers
+     */
+    private function applyPatternRules(Declarations $declarations, array $contracts): array
+    {
+        $appliedExemptions = [];
+        $unusedExclusions = [];
         foreach ($this->config->patternRules as $rule) {
+            $usedExclusions = [];
             foreach ($declarations->all() as $key => $record) {
                 if ($record->className === null || $record->file === null) {
                     continue;
@@ -217,36 +239,67 @@ final class EffectSystemRule implements Rule
                 if (!fnmatch($rule['methodPattern'], $record->name, FNM_NOESCAPE | FNM_CASEFOLD)) {
                     continue;
                 }
+
+                // Every matching pattern counts as used, so overlapping
+                // patterns are not reported as stale.
+                $excluded = false;
+                foreach ($rule['exclude'] as $excludePattern) {
+                    if (fnmatch($excludePattern, $record->className, FNM_NOESCAPE | FNM_CASEFOLD)) {
+                        $usedExclusions[$excludePattern] = true;
+                        $excluded = true;
+                    }
+                }
+                if ($excluded) {
+                    continue;
+                }
+
                 foreach ($rule['effectFree'] as $effect) {
                     if (isset($contracts[$key][$effect])) {
+                        continue;
+                    }
+                    if (in_array($effect, $record->exemptFromRules, true)) {
+                        $appliedExemptions[$key][$effect] = true;
                         continue;
                     }
                     $contracts[$key][$effect] = ContractOrigin::fromPatternRule($rule['classPattern'], $rule['methodPattern']);
                 }
             }
+
+            foreach ($rule['exclude'] as $excludePattern) {
+                if (isset($usedExclusions[$excludePattern])) {
+                    continue;
+                }
+                $unusedExclusions[] = [
+                    'classPattern' => $rule['classPattern'],
+                    'methodPattern' => $rule['methodPattern'],
+                    'exclude' => $excludePattern,
+                ];
+            }
         }
 
-        return $contracts;
+        return [$contracts, $appliedExemptions, $unusedExclusions];
     }
 
     /**
      * @param array<string, array<string, ContractOrigin>> $contracts
      * @param array<string, array<string, true>> $effects
      * @param array<string, array<string, true>> $declared
+     * @param array<string, array<string, true>> $appliedExemptions
+     * @param list<array{classPattern: string, methodPattern: string, exclude: string}> $unusedExclusions
      * @return list<IdentifierRuleError>
      */
-    private function buildErrors(Declarations $declarations, CallGraph $graph, array $contracts, array $effects, array $declared): array
+    private function buildErrors(Declarations $declarations, CallGraph $graph, array $contracts, array $effects, array $declared, array $appliedExemptions, array $unusedExclusions): array
     {
         $pathFinder = new PathFinder();
 
-        /** @var list<array{file: string, line: int, message: string, identifier: string}> $errorData */
+        /** @var list<array{file: string|null, line: int|null, message: string, identifier: string}> $errorData */
         $errorData = [];
 
         foreach ($declarations->all() as $record) {
             if ($record->file === null || $record->line === null) {
                 continue;
             }
-            foreach (array_unique([...$record->effects, ...$record->effectFree, ...$record->handles]) as $effect) {
+            foreach (array_unique([...$record->effects, ...$record->effectFree, ...$record->handles, ...$record->exemptFromRules]) as $effect) {
                 if (in_array($effect, $this->config->allowedEffects, true)) {
                     continue;
                 }
@@ -262,6 +315,59 @@ final class EffectSystemRule implements Rule
                     'identifier' => 'effects.unknownEffect',
                 ];
             }
+        }
+
+        foreach ($declarations->all() as $key => $record) {
+            if ($record->file === null || $record->line === null) {
+                continue;
+            }
+            foreach (array_unique($record->exemptFromRules) as $effect) {
+                $origin = $contracts[$key][$effect] ?? null;
+                if ($origin !== null) {
+                    // Pattern rules never replace an existing contract, so
+                    // this one is own or inherited.
+                    $message = sprintf(
+                        "%s. Only contracts from effects rules can be exempted.",
+                        $this->contractDescription($effect, $origin),
+                    );
+                    $identifier = 'effects.invalidExemption';
+                } elseif (!isset($appliedExemptions[$key][$effect])) {
+                    $message = sprintf("no effects rule requires it to be effect-free for '%s'. Remove the exemption.", $effect);
+                    $identifier = 'effects.unusedExemption';
+                } elseif (!isset($effects[$key][$effect])) {
+                    $message = sprintf("does not reach effect '%s'. Remove the exemption.", $effect);
+                    $identifier = 'effects.unusedExemption';
+                } else {
+                    continue;
+                }
+
+                $errorData[] = [
+                    'file' => $record->file,
+                    'line' => $record->line,
+                    'message' => sprintf(
+                        "Method %s has #[ExemptFromEffectRule('%s')] but %s",
+                        $record->displayName(),
+                        $effect,
+                        $message,
+                    ),
+                    'identifier' => $identifier,
+                ];
+            }
+        }
+
+        // Config has no source line, so these are reported without a file.
+        foreach ($unusedExclusions as $unusedExclusion) {
+            $errorData[] = [
+                'file' => null,
+                'line' => null,
+                'message' => sprintf(
+                    "Effects rule (classPattern: '%s', methodPattern: '%s') excludes '%s', which matches no method the rule applies to. Remove the exclusion.",
+                    $unusedExclusion['classPattern'],
+                    $unusedExclusion['methodPattern'],
+                    $unusedExclusion['exclude'],
+                ),
+                'identifier' => 'effects.unusedExclusion',
+            ];
         }
 
         foreach ($contracts as $key => $effectOrigins) {
@@ -299,11 +405,12 @@ final class EffectSystemRule implements Rule
 
         $errors = [];
         foreach ($errorData as $error) {
-            $errors[] = RuleErrorBuilder::message($error['message'])
-                ->identifier($error['identifier'])
-                ->file($error['file'])
-                ->line($error['line'])
-                ->build();
+            $builder = RuleErrorBuilder::message($error['message'])
+                ->identifier($error['identifier']);
+            if ($error['file'] !== null && $error['line'] !== null) {
+                $builder = $builder->file($error['file'])->line($error['line']);
+            }
+            $errors[] = $builder->build();
         }
 
         return $errors;

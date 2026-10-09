@@ -91,13 +91,15 @@ it has been released and the test suite passes on it.
 
 ## The attributes
 
-All three target methods and functions, and are repeatable.
+All are repeatable. `ExemptFromEffectRule` targets methods only; the others
+target methods and functions.
 
 | Attribute | Meaning |
 |---|---|
 | `#[Effect('slow')]` | This method **has** the effect (a source). |
 | `#[EffectFree('slow')]` | This method must not transitively reach the effect (a sink). Valid on interface/abstract methods; the contract applies to every implementation and override, and cannot be dropped. |
 | `#[HandlesEffect('slow')]` | This method **discharges** the effect: callees' `slow` effects do not propagate through it (e.g. a caching wrapper). An `#[Effect('slow')]` declared on the same method still counts. |
+| `#[ExemptFromEffectRule('slow', reason: '...')]` | This method is exempt from the `slow` contract an [effects rule](#exempting-methods-from-a-pattern-rule) imposes on it. It cannot drop an own or inherited `EffectFree`, and the effect still propagates to callers. |
 
 ### Handling effects: a worked example
 
@@ -218,12 +220,58 @@ Notes on stubs:
 - Stubs apply only to unanalysed code; a stub for a method in your analysed
   paths is ignored (the analysed declaration wins).
 
+### Exempting methods from a pattern rule
+
+A pattern rule is a policy imposed from outside the code, so it can have
+exceptions. There are two kinds:
+
+- **Out of scope:** whole classes the policy was never meant to cover, such as
+  dev-only controllers. List them in the rule's optional `exclude`
+  (fnmatch-style class patterns, case-insensitive):
+
+  ```neon
+  rules:
+      -
+          classPattern: 'App\Controller\*'
+          methodPattern: '*Action'
+          effectFree: ['slow']
+          exclude:
+              - 'App\Controller\DebugController'
+              - 'App\Controller\Internal\*'
+  ```
+
+- **Justified exception:** one method that is allowed to reach the effect,
+  for example an endpoint only ever requested by a background job. Mark it in
+  the code, with the reason:
+
+  ```php
+  final class ReportController
+  {
+      #[ExemptFromEffectRule('slow', reason: 'Only requested by the PDF renderer running in a queue job')]
+      public function renderAction(): Response { /* ... */ }
+
+      public function downloadAction(): Response { /* ... */ } // still checked
+  }
+  ```
+
+Both only drop contracts that come from pattern rules: an `#[EffectFree]` on
+the method or one it inherits always applies. Neither stops the effect
+propagating, so callers of an exempt method are still checked.
+
+Exemptions that no longer do anything are errors, like PHPStan's
+`reportUnmatchedIgnoredErrors`: an `exclude` pattern that matches no method
+the rule applies to, and an `#[ExemptFromEffectRule]` on a method no rule
+covers for that effect, or that no longer reaches it.
+
 ## Errors
 
 | Identifier | Reported when | Location |
 |---|---|---|
 | `effects.violation` | An `EffectFree` method (attribute, inherited, or pattern rule) transitively reaches the effect. The message includes a shortest call path. | Sink method's declaration |
 | `effects.contradiction` | A method declares `Effect('x')` while also being contractually `EffectFree('x')`. | The declaring method |
+| `effects.invalidExemption` | A method has `#[ExemptFromEffectRule('x')]` but its `EffectFree('x')` contract is its own or inherited, which an exemption cannot drop. | The declaring method |
+| `effects.unusedExemption` | A method has `#[ExemptFromEffectRule('x')]` but no pattern rule requires it to be effect-free for `x`, or it doesn't reach `x`. | The declaring method |
+| `effects.unusedExclusion` | A pattern rule's `exclude` entry matches no method the rule applies to. | No file (reported as `N/A`); suppress by identifier if needed |
 | `effects.unknownEffect` | An attribute uses an effect name not listed in `allowedEffects` (with no `allowedEffects` configured, every name is reported). Unknown names in the neon config itself throw at startup instead. | The declaring method |
 
 All errors are ordinary PHPStan errors: baselines, `ignoreErrors`, and editor

@@ -18,7 +18,7 @@ final class EffectsConfig
 {
     /**
      * @param list<DeclarationRecord> $stubRecords
-     * @param list<array{classPattern: string, methodPattern: string, effectFree: list<string>}> $patternRules
+     * @param list<array{classPattern: string, methodPattern: string, effectFree: list<string>, exclude: list<string>}> $patternRules
      * @param list<string> $allowedEffects
      * @param list<string> $excludeImplementationsFrom
      */
@@ -32,7 +32,7 @@ final class EffectsConfig
 
     /**
      * @param list<array{method?: string, function?: string, effects?: list<string>}> $stubs
-     * @param list<array{classPattern?: string, methodPattern?: string, effectFree?: list<string>}> $rules
+     * @param list<array{classPattern?: string, methodPattern?: string, effectFree?: list<string>, exclude?: list<string>}> $rules
      * @param list<string> $allowedEffects
      * @param list<string> $excludeImplementationsFrom
      */
@@ -61,6 +61,7 @@ final class EffectsConfig
                 'classPattern' => $classPattern,
                 'methodPattern' => $methodPattern,
                 'effectFree' => $effectFree,
+                'exclude' => $rule['exclude'] ?? [],
             ];
         }
 
