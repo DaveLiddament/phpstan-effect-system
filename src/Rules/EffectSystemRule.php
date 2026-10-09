@@ -95,7 +95,7 @@ final class EffectSystemRule implements Rule
         foreach ([MethodDeclarationCollector::class, FunctionDeclarationCollector::class] as $collectorClass) {
             foreach ($node->get($collectorClass) as $fileRecords) {
                 foreach ($fileRecords as $record) {
-                    $declarations->add(DeclarationRecord::fromCollectedArray($record));
+                    $declarations->add(DeclarationRecord::decode($record));
                 }
             }
         }

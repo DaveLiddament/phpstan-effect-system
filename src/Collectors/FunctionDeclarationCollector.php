@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace DaveLiddament\PhpstanEffectSystem\Collectors;
 
+use DaveLiddament\PhpstanEffectSystem\Graph\DeclarationRecord;
 use DaveLiddament\PhpstanEffectSystem\Graph\MethodKey;
 use PhpParser\Node;
 use PHPStan\Analyser\Scope;
@@ -13,7 +14,7 @@ use PHPStan\Node\InFunctionNode;
 /**
  * Records every free-function declaration.
  *
- * @implements Collector<InFunctionNode, array{key: string, class: null, name: string, file: string, line: int, effects: list<string>, effectFree: list<string>, handles: list<string>, exemptFromRules: list<string>, private: bool, abstract: bool}>
+ * @implements Collector<InFunctionNode, string>
  */
 final class FunctionDeclarationCollector implements Collector
 {
@@ -27,23 +28,21 @@ final class FunctionDeclarationCollector implements Collector
         return InFunctionNode::class;
     }
 
-    public function processNode(Node $node, Scope $scope): array
+    public function processNode(Node $node, Scope $scope): string
     {
         $function = $node->getFunctionReflection();
         $attributes = $this->attributeReader->read($function);
 
-        return [
-            'key' => MethodKey::forFunction($function->getName()),
-            'class' => null,
-            'name' => $function->getName(),
-            'file' => $scope->getFile(),
-            'line' => $node->getOriginalNode()->getStartLine(),
-            'effects' => $attributes['effects'],
-            'effectFree' => $attributes['effectFree'],
-            'handles' => $attributes['handles'],
-            'exemptFromRules' => $attributes['exemptFromRules'],
-            'private' => false,
-            'abstract' => false,
-        ];
+        return (new DeclarationRecord(
+            MethodKey::forFunction($function->getName()),
+            null,
+            $function->getName(),
+            $scope->getFile(),
+            $node->getOriginalNode()->getStartLine(),
+            $attributes['effects'],
+            $attributes['effectFree'],
+            $attributes['handles'],
+            exemptFromRules: $attributes['exemptFromRules'],
+        ))->encode();
     }
 }
