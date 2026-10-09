@@ -1,15 +1,13 @@
 # PHPStan Effect System
 
-A PHPStan extension implementing a lightweight effect system for PHP.
+A PHPStan extension that implements a lightweight effect system for PHP.
 
-Methods declare effects (e.g. `slow`, `io`, `db`) via attributes **at the source
-only**. The extension infers transitive effect propagation through the whole
-call graph — no annotations on intermediate callers — and enforces
-`#[EffectFree]` contracts at the boundaries you declare.
+An effect is a label for something a method does that you care about, e.g.
+`slow`.
 
-This is deliberately **not** the Java checked-exceptions model (declared
-propagation at every level). Effects are declared at leaves; everything else is
-inferred. Enforcement happens only at declared sinks.
+For example, you can mark any method that makes an external request as `slow`,
+then require that a controller never calls anything slow, however deep in its
+call chain:
 
 ```php
 use DaveLiddament\PhpstanEffectSystem\Attributes\Effect;
@@ -18,7 +16,7 @@ use DaveLiddament\PhpstanEffectSystem\Attributes\EffectFree;
 class ApiClient
 {
     #[Effect('slow')]                 // the source: this method IS slow
-    public function fetch(): void { /* ... */ }
+    public function fetch(): void { /* makes an HTTP request */ }
 }
 
 class OrderService
@@ -31,7 +29,7 @@ class OrderService
 
 class HomeController
 {
-    #[EffectFree('slow')]             // the sink: must never reach 'slow' — ERROR reported here
+    #[EffectFree('slow')]             // the sink: must never reach 'slow' (ERROR reported here)
     public function indexAction(): void
     {
         (new OrderService())->load();
@@ -44,7 +42,15 @@ Method HomeController::indexAction() is #[EffectFree('slow')] but reaches effect
 HomeController::indexAction() -> OrderService::load() -> ApiClient::fetch() (declares #[Effect('slow')]).
 ```
 
-Effect names are arbitrary strings — invent whatever taxonomy fits your
+To apply this to every controller without adding attributes to each one, use a
+[pattern rule](#configuration).
+
+Methods declare effects (e.g. `slow`, `io`, `db`) via attributes **at the source
+only**. The extension infers transitive effect propagation through the whole
+call graph, with no annotations on intermediate callers, and enforces
+`#[EffectFree]` contracts at the boundaries you declare.
+
+Effect names are arbitrary strings: invent whatever taxonomy fits your
 architecture (`slow`, `io`, `http`, `db`, `nondeterministic`, ...).
 
 > **Stability: experimental.** This package is pre-1.0. The attribute API,
@@ -86,7 +92,7 @@ All three target methods and functions, and are repeatable.
 
 ### Handling effects: a worked example
 
-`#[HandlesEffect]` is for boundaries that genuinely contain an effect — the
+`#[HandlesEffect]` is for boundaries that genuinely contain an effect. The
 classic case is a cache in front of something slow:
 
 ```php
@@ -114,7 +120,7 @@ class PriceCalculator
     #[EffectFree('slow')]
     public function total(int $qty): float
     {
-        return $qty * (new CachedExchangeRates())->rate();   // OK — no violation
+        return $qty * (new CachedExchangeRates())->rate();   // OK: no violation
     }
 }
 ```
@@ -122,48 +128,48 @@ class PriceCalculator
 Without the `#[HandlesEffect('slow')]`, `total()` would be reported: `slow`
 would propagate from `fetchRate()` through `rate()` (the closure's calls count
 as `rate()`'s calls). Note the handler only blocks effects arriving from
-callees — if `rate()` itself also declared `#[Effect('slow')]` (say, a cold
+callees. If `rate()` itself also declared `#[Effect('slow')]` (say, a cold
 cache is still slow enough to matter), that effect would still propagate.
 
 ## Semantics
 
-- **Propagation** — effects flow from callee to caller, transitively, through
+- **Propagation**: effects flow from callee to caller, transitively, through
   the inferred call graph. Recursion and mutual recursion are handled.
-- **HandlesEffect** — blocks propagation of that effect from callees. It does
+- **HandlesEffect**: blocks propagation of that effect from callees. It does
   not cancel an `Effect` of the same name declared on the same method.
-- **EffectFree inheritance** — a contract on an interface or parent method
+- **EffectFree inheritance**: a contract on an interface or parent method
   applies to every implementation/override; there is no syntax to drop it.
   Violations are reported at the implementation. This includes a method
   inherited from a parent that is unrelated to the interface (`class Child
   extends Base implements Runner`, with `run()` declared only in `Base`):
   the error is reported on `Base::run()`, naming `Child` as the link. Private
-  methods never inherit a contract — a same-named method in a subclass is not
+  methods never inherit a contract: a same-named method in a subclass is not
   an override. Constructors do **not** inherit either: `new Child()` always
   names the concrete class, so nobody constructs a `Child` relying on what
   `Base::__construct()` promised, and PHP itself exempts constructors from
   compatibility checks. The exception is a constructor declared on an
-  interface or as `abstract` — PHP enforces that signature on every
+  interface or as `abstract`: PHP enforces that signature on every
   implementation, and the contract is inherited with it. To keep a whole
   hierarchy cheap to construct, use a pattern rule instead
   (`classPattern: 'App\Entity\*', methodPattern: '__construct'`). A
   `new static()` factory is still covered: the factory's own contract reaches
   subclass constructors through dispatch.
-- **Contradiction** — declaring `Effect('x')` on a method whose own or
+- **Contradiction**: declaring `Effect('x')` on a method whose own or
   inherited contracts include `EffectFree('x')` is a dedicated error.
-- **Dynamic dispatch** — a call through an interface/abstract/parent type is
+- **Dynamic dispatch**: a call through an interface/abstract/parent type is
   treated as the union of all known implementations (closed-world). Effects
   declared on the interface method itself also count. Implementations in
   namespaces matching `excludeImplementationsFrom` (default: `Tests\*`,
   `*\Tests\*`) are excluded, so test doubles never pollute production
   dispatch.
-- **Closures / arrow functions** — calls inside inline closures count as calls
+- **Closures / arrow functions**: calls inside inline closures count as calls
   of the enclosing method.
-- **First-class callables** — `$obj->method(...)` records an edge at the
+- **First-class callables**: `$obj->method(...)` records an edge at the
   creation site (conservative: creating the callable counts as reaching it).
-- **Traits** — trait methods are analysed per using class; effects and
+- **Traits**: trait methods are analysed per using class; effects and
   contracts apply per class.
-- **Constructors** — `new Foo()` is an edge to `Foo::__construct()`.
-- **Late static binding** — `static::method()`, `new static()`,
+- **Constructors**: `new Foo()` is an edge to `Foo::__construct()`.
+- **Late static binding**: `static::method()`, `new static()`,
   `$object::method()`, `$classString::method()` and `new $classString()` are
   expanded over all known subclasses, like any other dynamic dispatch.
 
@@ -233,14 +239,14 @@ calls, implementations and effects inside that directory and will silently
 miss violations. Always run it over the full configured `paths`.
 
 Errors are reported on the first line of the sink's declaration, which is the
-first attribute line when the method has attributes — that is where a
+first attribute line when the method has attributes. That is where a
 `@phpstan-ignore effects.violation` comment has to go (above the attributes,
 not between them and the `function` keyword).
 
 ## Comparison with adjacent tools
 
 - **[spaze/phpstan-disallowed-calls](https://github.com/spaze/phpstan-disallowed-calls)**
-  forbids calls to specific functions/methods — but only **direct** calls at
+  forbids calls to specific functions/methods, but only **direct** calls at
   the call site. Use it for "never call `eval()` anywhere"; use this extension
   when the thing you're forbidding may be buried arbitrarily deep in the call
   graph.
@@ -248,7 +254,7 @@ not between them and the `function` keyword).
   is the same shape: a marker (`@deprecated`) enforced at direct usage sites,
   with no transitive propagation.
 - **Psalm's [taint analysis](https://psalm.dev/docs/security_analysis/)** is
-  the closest semantic relative — sources, sinks and sanitizers map directly
+  the closest semantic relative: sources, sinks and sanitizers map directly
   onto `Effect`, `EffectFree` and `HandlesEffect`. The difference: taint
   analysis tracks the **flow of data values** for security (user input
   reaching SQL or HTML), while this extension tracks **call reachability** of
@@ -264,7 +270,7 @@ not between them and the `function` keyword).
 
 ## Known limitations (v1)
 
-Not tracked — these are silent false negatives, by design:
+Not tracked (these are silent false negatives, by design):
 
 - Variable, string and array callables (`$fn()`, `call_user_func('foo')`,
   `array_map([$obj, 'method'], ...)`), container dispatch
@@ -285,7 +291,7 @@ Not tracked — these are silent false negatives, by design:
 - Attribute arguments that are not compile-time constant strings (class
   constants work; runtime expressions are skipped).
 
-Conditional effects ("slow only on cold cache") have no path-sensitivity —
+Conditional effects ("slow only on cold cache") have no path-sensitivity;
 model the wrapper with `#[HandlesEffect]` instead.
 
 ## License
