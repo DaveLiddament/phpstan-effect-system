@@ -6,6 +6,7 @@ namespace DaveLiddament\PhpstanEffectSystem\Collectors;
 
 use DaveLiddament\PhpstanEffectSystem\Attributes\Effect;
 use DaveLiddament\PhpstanEffectSystem\Attributes\EffectFree;
+use DaveLiddament\PhpstanEffectSystem\Attributes\ExemptFromEffectRule;
 use DaveLiddament\PhpstanEffectSystem\Attributes\HandlesEffect;
 use PHPStan\Reflection\Php\PhpFunctionFromParserNodeReflection;
 
@@ -22,14 +23,15 @@ final class EffectAttributeReader
         Effect::class => 'effects',
         EffectFree::class => 'effectFree',
         HandlesEffect::class => 'handles',
+        ExemptFromEffectRule::class => 'exemptFromRules',
     ];
 
     /**
-     * @return array{effects: list<string>, effectFree: list<string>, handles: list<string>}
+     * @return array{effects: list<string>, effectFree: list<string>, handles: list<string>, exemptFromRules: list<string>}
      */
     public function read(PhpFunctionFromParserNodeReflection $function): array
     {
-        $result = ['effects' => [], 'effectFree' => [], 'handles' => []];
+        $result = ['effects' => [], 'effectFree' => [], 'handles' => [], 'exemptFromRules' => []];
 
         foreach ($function->getAttributes() as $attribute) {
             $bucket = null;

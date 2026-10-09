@@ -138,4 +138,20 @@ final class EffectsConfigTest extends TestCase
             [],
         );
     }
+
+    public function testRuleExcludeDefaultsToEmpty(): void
+    {
+        $config = EffectsConfig::fromParameters(
+            [],
+            [
+                ['classPattern' => 'App\*', 'methodPattern' => '*', 'effectFree' => ['slow'], 'exclude' => ['App\Debug*']],
+                ['classPattern' => 'Lib\*', 'methodPattern' => '*', 'effectFree' => ['slow']],
+            ],
+            ['slow'],
+            [],
+        );
+
+        self::assertSame(['App\Debug*'], $config->patternRules[0]['exclude']);
+        self::assertSame([], $config->patternRules[1]['exclude']);
+    }
 }

@@ -15,7 +15,7 @@ use PHPStan\Node\InClassMethodNode;
  * effect attributes). Trait methods are analysed once per using class, so they
  * are recorded per using class — exactly what the call graph needs.
  *
- * @implements Collector<InClassMethodNode, array{key: string, class: string, name: string, file: string, line: int, effects: list<string>, effectFree: list<string>, handles: list<string>, private: bool, abstract: bool}>
+ * @implements Collector<InClassMethodNode, array{key: string, class: string, name: string, file: string, line: int, effects: list<string>, effectFree: list<string>, handles: list<string>, exemptFromRules: list<string>, private: bool, abstract: bool}>
  */
 final class MethodDeclarationCollector implements Collector
 {
@@ -56,6 +56,7 @@ final class MethodDeclarationCollector implements Collector
             'effects' => $attributes['effects'],
             'effectFree' => $attributes['effectFree'],
             'handles' => $attributes['handles'],
+            'exemptFromRules' => $attributes['exemptFromRules'],
             'private' => $method->isPrivate(),
             'abstract' => $node->getOriginalNode()->isAbstract() || $classReflection->isInterface(),
         ];
