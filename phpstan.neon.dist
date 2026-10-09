@@ -5,6 +5,9 @@ includes:
 
 parameters:
 	level: max
+	phpVersion:
+		min: 80400
+		max: 80599
 	paths:
 		- src
 		- tests
