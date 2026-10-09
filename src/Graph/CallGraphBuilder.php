@@ -46,10 +46,12 @@ final class CallGraphBuilder
                 // known subtype's implementation.
                 $calledClassLower = strtolower(ltrim($parts[1], '\\'));
                 $methodLower = strtolower($parts[2]);
-                $implementationKeys = $dispatchTargets[$calledClassLower . '::' . $methodLower] ??= $this->dispatchTargets($hierarchy, $declarations, $calledClassLower, $methodLower);
-                foreach ($implementationKeys as $implementationKey) {
-                    $graph->addEdge($caller, $implementationKey);
+                $targetKey = $calledClassLower . '::' . $methodLower;
+                if (!isset($dispatchTargets[$targetKey])) {
+                    $dispatchTargets[$targetKey] = true;
+                    $graph->addDispatchTarget($targetKey, $this->dispatchTargets($hierarchy, $declarations, $calledClassLower, $methodLower));
                 }
+                $graph->addDispatchEdge($caller, $targetKey);
             }
         }
 
