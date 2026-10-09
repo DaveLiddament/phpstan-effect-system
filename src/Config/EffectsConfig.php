@@ -125,19 +125,36 @@ final class EffectsConfig
      */
     private static function assertKnownEffects(array $effects, array $allowedEffects, string $where): void
     {
-        if ($allowedEffects === []) {
-            return;
-        }
-
         foreach ($effects as $effect) {
             if (!in_array($effect, $allowedEffects, true)) {
                 throw new InvalidArgumentException(sprintf(
-                    "phpstan-effect-system: %s uses unknown effect '%s'. Allowed effects: %s.",
+                    'phpstan-effect-system: %s %s',
                     $where,
-                    $effect,
-                    implode(', ', $allowedEffects),
+                    self::unknownEffectMessage($effect, $allowedEffects),
                 ));
             }
         }
+    }
+
+    /**
+     * Shared by config validation and the attribute check, so both explain
+     * the fix the same way.
+     *
+     * @param list<string> $allowedEffects
+     */
+    public static function unknownEffectMessage(string $effect, array $allowedEffects): string
+    {
+        if ($allowedEffects === []) {
+            return sprintf(
+                "uses effect '%s', which is not listed in allowedEffects (none configured). Every effect name must be listed in the effects.allowedEffects parameter.",
+                $effect,
+            );
+        }
+
+        return sprintf(
+            "uses effect '%s', which is not listed in allowedEffects (%s). Fix the effect name, or add it to the effects.allowedEffects parameter.",
+            $effect,
+            implode(', ', $allowedEffects),
+        );
     }
 }

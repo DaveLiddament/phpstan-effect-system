@@ -21,6 +21,9 @@ use PHPStan\Testing\RuleTestCase;
  */
 abstract class EffectSystemRuleTestCase extends RuleTestCase
 {
+    /** Every effect name the fixtures use, except the deliberate typos. */
+    protected const ALLOWED_EFFECTS = ['slow', 'io', 'http', 'smtp'];
+
     protected function getCollectors(): array
     {
         $reader = new EffectAttributeReader();

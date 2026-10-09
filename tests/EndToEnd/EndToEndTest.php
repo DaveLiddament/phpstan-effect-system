@@ -76,6 +76,8 @@ final class EndToEndTest extends TestCase
             \tbootstrapFiles:
             \t\t- {$repoRoot}/vendor/autoload.php
             \ttmpDir: {$this->workDir}/phpstan-tmp
+            \teffects:
+            \t\tallowedEffects: ['slow']
 
             NEON;
         file_put_contents($this->workDir . '/phpstan.neon', $neon);

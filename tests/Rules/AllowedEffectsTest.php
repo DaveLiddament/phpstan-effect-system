@@ -18,11 +18,11 @@ final class AllowedEffectsTest extends EffectSystemRuleTestCase
     {
         $this->analyse([__DIR__ . '/data/allowed-effects.php'], [
             [
-                "Method EffectTest\\AllowedEffects\\Repo::load() uses unknown effect 'slwo'. Allowed effects: slow, io.",
+                "Method EffectTest\\AllowedEffects\\Repo::load() uses effect 'slwo', which is not listed in allowedEffects (slow, io). Fix the effect name, or add it to the effects.allowedEffects parameter.",
                 13,
             ],
             [
-                "Method EffectTest\\AllowedEffects\\Repo::find() uses unknown effect 'database'. Allowed effects: slow, io.",
+                "Method EffectTest\\AllowedEffects\\Repo::find() uses effect 'database', which is not listed in allowedEffects (slow, io). Fix the effect name, or add it to the effects.allowedEffects parameter.",
                 18,
             ],
         ]);

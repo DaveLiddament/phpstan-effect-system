@@ -18,7 +18,7 @@ final class EffectsConfigTest extends TestCase
                 ['function' => 'file_get_contents', 'effects' => ['io']],
             ],
             [],
-            [],
+            ['slow', 'http', 'io'],
             [],
         );
 
@@ -56,7 +56,7 @@ final class EffectsConfigTest extends TestCase
         EffectsConfig::fromParameters(
             [['method' => 'justAMethodName', 'effects' => ['io']]],
             [],
-            [],
+            ['io'],
             [],
         );
     }
@@ -77,7 +77,7 @@ final class EffectsConfigTest extends TestCase
     public function testStubEffectOutsideAllowedEffectsIsRejected(): void
     {
         $this->expectException(InvalidArgumentException::class);
-        $this->expectExceptionMessageIsOrContains("unknown effect 'htpp'");
+        $this->expectExceptionMessageIsOrContains("uses effect 'htpp', which is not listed in allowedEffects (http, slow)");
 
         EffectsConfig::fromParameters(
             [['method' => 'A::b', 'effects' => ['htpp']]],
@@ -103,12 +103,38 @@ final class EffectsConfigTest extends TestCase
     public function testRuleEffectOutsideAllowedEffectsIsRejected(): void
     {
         $this->expectException(InvalidArgumentException::class);
-        $this->expectExceptionMessageIsOrContains("unknown effect 'slwo'");
+        $this->expectExceptionMessageIsOrContains("uses effect 'slwo', which is not listed in allowedEffects (slow)");
 
         EffectsConfig::fromParameters(
             [],
             [['classPattern' => 'App\*', 'methodPattern' => '*', 'effectFree' => ['slwo']]],
             ['slow'],
+            [],
+        );
+    }
+
+    public function testStubEffectIsRejectedWhenAllowedEffectsIsNotConfigured(): void
+    {
+        $this->expectException(InvalidArgumentException::class);
+        $this->expectExceptionMessageIsOrContains("effects stub #0 uses effect 'io', which is not listed in allowedEffects (none configured)");
+
+        EffectsConfig::fromParameters(
+            [['function' => 'file_get_contents', 'effects' => ['io']]],
+            [],
+            [],
+            [],
+        );
+    }
+
+    public function testRuleEffectIsRejectedWhenAllowedEffectsIsNotConfigured(): void
+    {
+        $this->expectException(InvalidArgumentException::class);
+        $this->expectExceptionMessageIsOrContains("effects rule #0 uses effect 'slow', which is not listed in allowedEffects (none configured)");
+
+        EffectsConfig::fromParameters(
+            [],
+            [['classPattern' => 'App\*', 'methodPattern' => '*', 'effectFree' => ['slow']]],
+            [],
             [],
         );
     }

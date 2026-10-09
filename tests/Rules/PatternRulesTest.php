@@ -20,7 +20,7 @@ final class PatternRulesTest extends EffectSystemRuleTestCase
                     'effectFree' => ['slow'],
                 ],
             ],
-            [],
+            self::ALLOWED_EFFECTS,
             ['Tests\*', '*\Tests\*'],
         );
     }

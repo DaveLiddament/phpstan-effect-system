@@ -17,7 +17,7 @@ final class StubsTest extends EffectSystemRuleTestCase
                 ['method' => 'EffectTest\StubVendor\Mailer::send', 'effects' => ['smtp']],
             ],
             [],
-            [],
+            self::ALLOWED_EFFECTS,
             ['Tests\*', '*\Tests\*'],
         );
     }

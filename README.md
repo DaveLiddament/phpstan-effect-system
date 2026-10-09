@@ -72,6 +72,15 @@ includes:
     - vendor/dave-liddament/phpstan-effect-system/extension.neon
 ```
 
+Then list every effect name you use. This is required: any other name is an
+error, so a typo can't silently create a contract that never fails.
+
+```neon
+parameters:
+    effects:
+        allowedEffects: ['slow', 'io']
+```
+
 The package requires `phpstan/phpstan`, so install it in `require-dev`. That
 is safe even though the attributes appear in production code: the attribute
 classes themselves have zero dependencies, and PHP never autoloads an attribute
@@ -175,8 +184,8 @@ cache is still slow enough to matter), that effect would still propagate.
 
 ## Configuration
 
-All configuration lives under `parameters.effects` and is optional. The neon
-schema is validated, so typos in the config fail fast.
+All configuration lives under `parameters.effects`. Only `allowedEffects` is
+required. The neon schema is validated, so typos in the config fail fast.
 
 ```neon
 parameters:
@@ -191,8 +200,8 @@ parameters:
         rules:
             - { classPattern: 'App\Controller\*', methodPattern: '*Action', effectFree: ['slow'] }
 
-        # Optional typo protection: error on any effect name not listed.
-        # Empty list (default) disables the check.
+        # Required: every effect name used in attributes, stubs and rules.
+        # Any other name is an error, which catches typos.
         allowedEffects: ['slow', 'io', 'http', 'db']
 
         # Implementations in these namespaces are ignored when expanding
@@ -215,7 +224,7 @@ Notes on stubs:
 |---|---|---|
 | `effects.violation` | An `EffectFree` method (attribute, inherited, or pattern rule) transitively reaches the effect. The message includes a shortest call path. | Sink method's declaration |
 | `effects.contradiction` | A method declares `Effect('x')` while also being contractually `EffectFree('x')`. | The declaring method |
-| `effects.unknownEffect` | An attribute uses an effect name outside `allowedEffects` (when configured). Unknown names in the neon config itself throw at startup instead. | The declaring method |
+| `effects.unknownEffect` | An attribute uses an effect name not listed in `allowedEffects` (with no `allowedEffects` configured, every name is reported). Unknown names in the neon config itself throw at startup instead. | The declaring method |
 
 All errors are ordinary PHPStan errors: baselines, `ignoreErrors`, and editor
 integration work as usual.

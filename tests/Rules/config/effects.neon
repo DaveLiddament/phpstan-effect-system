@@ -6,3 +6,4 @@ parameters:
 		stubs:
 			- { function: 'file_get_contents', effects: ['io'] }
 			- { method: 'EffectTest\StubVendor\Mailer::send', effects: ['smtp'] }
+		allowedEffects: ['slow', 'io', 'http', 'smtp']

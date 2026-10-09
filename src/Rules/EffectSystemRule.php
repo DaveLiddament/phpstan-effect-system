@@ -242,28 +242,25 @@ final class EffectSystemRule implements Rule
         /** @var list<array{file: string, line: int, message: string, identifier: string}> $errorData */
         $errorData = [];
 
-        if ($this->config->allowedEffects !== []) {
-            foreach ($declarations->all() as $record) {
-                if ($record->file === null || $record->line === null) {
+        foreach ($declarations->all() as $record) {
+            if ($record->file === null || $record->line === null) {
+                continue;
+            }
+            foreach (array_unique([...$record->effects, ...$record->effectFree, ...$record->handles]) as $effect) {
+                if (in_array($effect, $this->config->allowedEffects, true)) {
                     continue;
                 }
-                foreach (array_unique([...$record->effects, ...$record->effectFree, ...$record->handles]) as $effect) {
-                    if (in_array($effect, $this->config->allowedEffects, true)) {
-                        continue;
-                    }
-                    $errorData[] = [
-                        'file' => $record->file,
-                        'line' => $record->line,
-                        'message' => sprintf(
-                            "%s %s uses unknown effect '%s'. Allowed effects: %s.",
-                            $record->className !== null ? 'Method' : 'Function',
-                            $record->displayName(),
-                            $effect,
-                            implode(', ', $this->config->allowedEffects),
-                        ),
-                        'identifier' => 'effects.unknownEffect',
-                    ];
-                }
+                $errorData[] = [
+                    'file' => $record->file,
+                    'line' => $record->line,
+                    'message' => sprintf(
+                        '%s %s %s',
+                        $record->className !== null ? 'Method' : 'Function',
+                        $record->displayName(),
+                        EffectsConfig::unknownEffectMessage($effect, $this->config->allowedEffects),
+                    ),
+                    'identifier' => 'effects.unknownEffect',
+                ];
             }
         }
 
