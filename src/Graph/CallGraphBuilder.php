@@ -26,14 +26,17 @@ final class CallGraphBuilder
     {
         $graph = new CallGraph();
         $dispatchTargets = [];
+        // explode() returns new strings for every record; keep one copy per key.
+        $keys = [];
         foreach ($callRecords as $record) {
             $callees = explode("\n", $record);
             $caller = array_shift($callees);
+            $caller = $keys[$caller] ??= $caller;
             foreach ($callees as $callee) {
                 $parts = explode("\t", $callee);
                 // Direct edge to the declared method: carries effects declared
                 // on interface/abstract methods themselves.
-                $graph->addEdge($caller, $parts[0]);
+                $graph->addEdge($caller, $keys[$parts[0]] ??= $parts[0]);
 
                 if (count($parts) !== 3) {
                     continue;
