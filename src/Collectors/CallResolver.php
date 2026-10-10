@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace DaveLiddament\PhpstanEffectSystem\Collectors;
 
+use DaveLiddament\PhpstanEffectSystem\Graph\CallRecord;
 use DaveLiddament\PhpstanEffectSystem\Graph\MethodKey;
 use PhpParser\Node;
 use PhpParser\Node\Expr;
@@ -44,9 +45,8 @@ final class CallResolver
 
     /**
      * @param list<Callee> $callees
-     * @return array{caller: string, callees: list<Callee>}|null
      */
-    public function buildRecord(Scope $scope, array $callees): ?array
+    public function buildRecord(Scope $scope, array $callees): ?string
     {
         if ($callees === []) {
             return null;
@@ -57,7 +57,7 @@ final class CallResolver
             return null;
         }
 
-        return ['caller' => $caller, 'callees' => $callees];
+        return CallRecord::encode($caller, $callees);
     }
 
     /**

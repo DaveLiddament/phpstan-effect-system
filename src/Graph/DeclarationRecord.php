@@ -28,22 +28,24 @@ final class DeclarationRecord
     }
 
     /**
-     * @param array{key: string, class: string|null, name: string, file: string|null, line: int|null, effects: list<string>, effectFree: list<string>, handles: list<string>, exemptFromRules: list<string>, private: bool, abstract: bool} $data
+     * Encodes the record as one string for the collectors. PHPStan keeps every
+     * collected record in memory and in the result cache, and one string costs
+     * far less than an array of eleven fields. The key is rebuilt on decode.
      */
-    public static function fromCollectedArray(array $data): self
+    public function encode(): string
     {
+        return serialize([$this->className, $this->name, $this->file, $this->line, $this->effects, $this->effectFree, $this->handles, $this->private, $this->abstract, $this->exemptFromRules]);
+    }
+
+    public static function decode(string $encoded): self
+    {
+        /** @var array{string|null, string, string|null, int|null, list<string>, list<string>, list<string>, bool, bool, list<string>} $data */
+        $data = unserialize($encoded, ['allowed_classes' => false]);
+        [$className, $name] = $data;
+
         return new self(
-            $data['key'],
-            $data['class'],
-            $data['name'],
-            $data['file'],
-            $data['line'],
-            $data['effects'],
-            $data['effectFree'],
-            $data['handles'],
-            $data['private'],
-            $data['abstract'],
-            $data['exemptFromRules'],
+            $className === null ? MethodKey::forFunction($name) : MethodKey::forMethod($className, $name),
+            ...$data,
         );
     }
 

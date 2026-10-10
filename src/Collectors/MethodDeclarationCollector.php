@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace DaveLiddament\PhpstanEffectSystem\Collectors;
 
+use DaveLiddament\PhpstanEffectSystem\Graph\DeclarationRecord;
 use DaveLiddament\PhpstanEffectSystem\Graph\MethodKey;
 use PhpParser\Node;
 use PHPStan\Analyser\Scope;
@@ -15,7 +16,7 @@ use PHPStan\Node\InClassMethodNode;
  * effect attributes). Trait methods are analysed once per using class, so they
  * are recorded per using class — exactly what the call graph needs.
  *
- * @implements Collector<InClassMethodNode, array{key: string, class: string, name: string, file: string, line: int, effects: list<string>, effectFree: list<string>, handles: list<string>, exemptFromRules: list<string>, private: bool, abstract: bool}>
+ * @implements Collector<InClassMethodNode, string>
  */
 final class MethodDeclarationCollector implements Collector
 {
@@ -29,7 +30,7 @@ final class MethodDeclarationCollector implements Collector
         return InClassMethodNode::class;
     }
 
-    public function processNode(Node $node, Scope $scope): ?array
+    public function processNode(Node $node, Scope $scope): ?string
     {
         $method = $node->getMethodReflection();
         if ($method->isPropertyHook()) {
@@ -47,18 +48,18 @@ final class MethodDeclarationCollector implements Collector
             }
         }
 
-        return [
-            'key' => MethodKey::forMethod($classReflection->getName(), $method->getName()),
-            'class' => $classReflection->getName(),
-            'name' => $method->getName(),
-            'file' => $file,
-            'line' => $node->getOriginalNode()->getStartLine(),
-            'effects' => $attributes['effects'],
-            'effectFree' => $attributes['effectFree'],
-            'handles' => $attributes['handles'],
-            'exemptFromRules' => $attributes['exemptFromRules'],
-            'private' => $method->isPrivate(),
-            'abstract' => $node->getOriginalNode()->isAbstract() || $classReflection->isInterface(),
-        ];
+        return (new DeclarationRecord(
+            MethodKey::forMethod($classReflection->getName(), $method->getName()),
+            $classReflection->getName(),
+            $method->getName(),
+            $file,
+            $node->getOriginalNode()->getStartLine(),
+            $attributes['effects'],
+            $attributes['effectFree'],
+            $attributes['handles'],
+            $method->isPrivate(),
+            $node->getOriginalNode()->isAbstract() || $classReflection->isInterface(),
+            $attributes['exemptFromRules'],
+        ))->encode();
     }
 }
