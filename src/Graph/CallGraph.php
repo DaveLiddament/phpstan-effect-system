@@ -22,10 +22,10 @@ final class CallGraph
     /** @var array<string, array<string, true>> dispatch target => callers */
     private array $dispatchCallers = [];
 
-    /** @var array<string, list<string>> dispatch target => implementations */
+    /** @var array<string, array<string, true>> dispatch target => implementations */
     private array $implementations = [];
 
-    /** @var array<string, list<string>> implementation => dispatch targets that reach it */
+    /** @var array<string, array<string, true>> implementation => dispatch targets that reach it */
     private array $targetsOf = [];
 
     /** @var array<string, array<string, true>>|null */
@@ -38,13 +38,16 @@ final class CallGraph
     }
 
     /**
+     * Subtypes that inherit the same method resolve to the same
+     * implementation, so $implementations may repeat keys; each is stored once.
+     *
      * @param list<string> $implementations
      */
     public function addDispatchTarget(string $target, array $implementations): void
     {
-        $this->implementations[$target] = $implementations;
         foreach ($implementations as $implementation) {
-            $this->targetsOf[$implementation][] = $target;
+            $this->implementations[$target][$implementation] = true;
+            $this->targetsOf[$implementation][$target] = true;
         }
         $this->forward = null;
     }
@@ -67,7 +70,7 @@ final class CallGraph
             }
             foreach ($this->dispatchCallers as $target => $callers) {
                 foreach ($callers as $from => $_) {
-                    foreach ($this->implementations[$target] ?? [] as $implementation) {
+                    foreach ($this->implementations[$target] ?? [] as $implementation => $__) {
                         $this->forward[$from][$implementation] = true;
                     }
                 }
@@ -81,7 +84,7 @@ final class CallGraph
     public function callersOf(string $key): array
     {
         $callers = $this->reverse[$key] ?? [];
-        foreach ($this->targetsOf[$key] ?? [] as $target) {
+        foreach ($this->targetsOf[$key] ?? [] as $target => $_) {
             $callers += $this->dispatchCallers[$target] ?? [];
         }
 
