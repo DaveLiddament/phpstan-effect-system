@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace DaveLiddament\PhpstanEffectSystem\Tests\Graph;
 
 use DaveLiddament\PhpstanEffectSystem\Graph\CallGraphBuilder;
+use DaveLiddament\PhpstanEffectSystem\Graph\CallRecord;
 use DaveLiddament\PhpstanEffectSystem\Graph\ClassHierarchy;
 use DaveLiddament\PhpstanEffectSystem\Graph\DeclarationRecord;
 use DaveLiddament\PhpstanEffectSystem\Graph\Declarations;
@@ -34,12 +35,9 @@ final class CallGraphBuilderTest extends TestCase
 
         $builder = new CallGraphBuilder(['Tests\*', '*\Tests\*']);
         $graph = $builder->build([
-            [
-                'caller' => 'app\caller::go',
-                'callees' => [
-                    ['key' => 'app\iface::run', 'calledClass' => 'App\Iface', 'method' => 'run', 'dispatch' => true],
-                ],
-            ],
+            CallRecord::encode('app\caller::go', [
+                ['key' => 'app\iface::run', 'calledClass' => 'App\Iface', 'method' => 'run', 'dispatch' => true],
+            ]),
         ], $hierarchy, $declarations);
 
         $callees = $graph->calleesOf('app\caller::go');
@@ -59,12 +57,9 @@ final class CallGraphBuilderTest extends TestCase
         ]);
 
         $graph = (new CallGraphBuilder([]))->build([
-            [
-                'caller' => 'app\caller::go',
-                'callees' => [
-                    ['key' => 'app\base::run', 'calledClass' => 'App\Base', 'method' => 'run', 'dispatch' => true],
-                ],
-            ],
+            CallRecord::encode('app\caller::go', [
+                ['key' => 'app\base::run', 'calledClass' => 'App\Base', 'method' => 'run', 'dispatch' => true],
+            ]),
         ], $hierarchy, $declarations);
 
         // App\Child inherits run() from App\Base, so the expansion resolves

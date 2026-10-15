@@ -24,7 +24,7 @@ use PHPStan\Collectors\Collector;
  * First-class callables never reach this collector: PHPStan replaces them
  * with virtual nodes handled by the *CallableCollector classes.
  *
- * @implements Collector<CallLike, array{caller: string, callees: list<array{key: string, calledClass: string|null, method: string|null, dispatch: bool}>}>
+ * @implements Collector<CallLike, string>
  */
 final class CallCollector implements Collector
 {
@@ -38,7 +38,7 @@ final class CallCollector implements Collector
         return CallLike::class;
     }
 
-    public function processNode(Node $node, Scope $scope): ?array
+    public function processNode(Node $node, Scope $scope): ?string
     {
         if ($node instanceof MethodCall || $node instanceof NullsafeMethodCall) {
             $callees = $this->callResolver->resolveMethodCallees($node->var, $node->name, $scope);

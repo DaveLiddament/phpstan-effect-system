@@ -20,39 +20,62 @@ final class CallGraphBuilder
     }
 
     /**
-     * @param list<array{caller: string, callees: list<array{key: string, calledClass: string|null, method: string|null, dispatch: bool}>}> $callRecords
+     * @param list<string> $callRecords encoded by CallRecord
      */
     public function build(array $callRecords, ClassHierarchy $hierarchy, Declarations $declarations): CallGraph
     {
         $graph = new CallGraph();
+        $dispatchTargets = [];
+        // explode() returns new strings for every record; keep one copy per key.
+        $keys = [];
         foreach ($callRecords as $record) {
-            foreach ($record['callees'] as $callee) {
+            $callees = explode("\n", $record);
+            $caller = array_shift($callees);
+            $caller = $keys[$caller] ??= $caller;
+            foreach ($callees as $callee) {
+                $parts = explode("\t", $callee);
                 // Direct edge to the declared method: carries effects declared
                 // on interface/abstract methods themselves.
-                $graph->addEdge($record['caller'], $callee['key']);
+                $graph->addEdge($caller, $keys[$parts[0]] ??= $parts[0]);
 
-                if (!$callee['dispatch'] || $callee['calledClass'] === null || $callee['method'] === null) {
+                if (count($parts) !== 3) {
                     continue;
                 }
 
                 // Closed-world dynamic dispatch: the call may land on any
                 // known subtype's implementation.
-                $calledClassLower = strtolower(ltrim($callee['calledClass'], '\\'));
-                $methodLower = strtolower($callee['method']);
-                foreach ($hierarchy->subtypesOf($calledClassLower) as $subtype) {
-                    if ($this->isExcluded($subtype)) {
-                        continue;
-                    }
-                    $implementationKey = $hierarchy->resolveImplementation($declarations, $subtype, $methodLower);
-                    if ($implementationKey === null) {
-                        continue;
-                    }
-                    $graph->addEdge($record['caller'], $implementationKey);
+                $calledClassLower = strtolower(ltrim($parts[1], '\\'));
+                $methodLower = strtolower($parts[2]);
+                $targetKey = $calledClassLower . '::' . $methodLower;
+                if (!isset($dispatchTargets[$targetKey])) {
+                    $dispatchTargets[$targetKey] = true;
+                    $graph->addDispatchTarget($targetKey, $this->dispatchTargets($hierarchy, $declarations, $calledClassLower, $methodLower));
                 }
+                $graph->addDispatchEdge($caller, $targetKey);
             }
         }
 
         return $graph;
+    }
+
+    /**
+     * @return list<string>
+     */
+    private function dispatchTargets(ClassHierarchy $hierarchy, Declarations $declarations, string $calledClassLower, string $methodLower): array
+    {
+        $implementationKeys = [];
+        foreach ($hierarchy->subtypesOf($calledClassLower) as $subtype) {
+            if ($this->isExcluded($subtype)) {
+                continue;
+            }
+            $implementationKey = $hierarchy->resolveImplementation($declarations, $subtype, $methodLower);
+            if ($implementationKey === null) {
+                continue;
+            }
+            $implementationKeys[] = $implementationKey;
+        }
+
+        return $implementationKeys;
     }
 
     public function isExcluded(string $classLower): bool
