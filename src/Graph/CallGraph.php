@@ -58,6 +58,12 @@ final class CallGraph
         $this->forward = null;
     }
 
+    /** @return list<string> every directly called key */
+    public function calledKeys(): array
+    {
+        return array_keys($this->reverse);
+    }
+
     /** @return list<string> */
     public function calleesOf(string $key): array
     {

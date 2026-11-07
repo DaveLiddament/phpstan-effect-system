@@ -20,9 +20,12 @@ use DaveLiddament\PhpstanEffectSystem\Graph\DeclarationRecord;
 use DaveLiddament\PhpstanEffectSystem\Graph\Declarations;
 use DaveLiddament\PhpstanEffectSystem\Graph\EffectPropagator;
 use DaveLiddament\PhpstanEffectSystem\Graph\PathFinder;
+use DaveLiddament\PhpstanEffectSystem\Inference\EffectInference;
 use PhpParser\Node;
+use PhpParser\Node\Name\FullyQualified;
 use PHPStan\Analyser\Scope;
 use PHPStan\Node\CollectedDataNode;
+use PHPStan\Reflection\ReflectionProvider;
 use PHPStan\Rules\IdentifierRuleError;
 use PHPStan\Rules\Rule;
 use PHPStan\Rules\RuleErrorBuilder;
@@ -48,6 +51,8 @@ final class EffectSystemRule implements Rule
         array $rules,
         array $allowedEffects,
         array $excludeImplementationsFrom,
+        private EffectInference $inference,
+        private ReflectionProvider $reflectionProvider,
     ) {
         $this->config = EffectsConfig::fromParameters($stubs, $rules, $allowedEffects, $excludeImplementationsFrom);
     }
@@ -69,12 +74,13 @@ final class EffectSystemRule implements Rule
         $hierarchy = $this->buildHierarchy($node);
         $graphBuilder = new CallGraphBuilder($this->config->excludeImplementationsFrom);
         $graph = $this->buildGraph($node, $hierarchy, $declarations, $graphBuilder);
+        $this->inferUnanalysedCallees($graph, $declarations);
 
         $declared = [];
         $handles = [];
         foreach ($declarations->all() as $key => $record) {
-            if ($record->effects !== []) {
-                $declared[$key] = array_fill_keys($record->effects, true);
+            if ($record->effects !== [] || $record->inferred !== []) {
+                $declared[$key] = array_fill_keys($record->effects, true) + array_fill_keys(array_keys($record->inferred), true);
             }
             if ($record->handles === []) {
                 continue;
@@ -107,6 +113,55 @@ final class EffectSystemRule implements Rule
         }
 
         return $declarations;
+    }
+
+    /**
+     * Analysed declarations were already given their inferred effects by the
+     * collectors. Unanalysed code (vendor, built-ins) has no declaration
+     * record, or only a stub, so each one analysed code calls is looked up
+     * here, once per run.
+     */
+    private function inferUnanalysedCallees(CallGraph $graph, Declarations $declarations): void
+    {
+        if ($this->inference->isEmpty()) {
+            return;
+        }
+
+        foreach ($graph->calledKeys() as $key) {
+            $stub = $declarations->get($key);
+            if ($stub !== null && $stub->file !== null) {
+                continue;
+            }
+
+            if (str_ends_with($key, '()')) {
+                $name = new FullyQualified(substr($key, 0, -2));
+                if (!$this->reflectionProvider->hasFunction($name, null)) {
+                    continue;
+                }
+                $function = $this->reflectionProvider->getFunction($name, null);
+                $className = null;
+                $functionName = $function->getName();
+                $inferred = $this->inference->inferForFunction($function);
+            } else {
+                [$classLower, $methodLower] = explode('::', $key, 2);
+                if (!$this->reflectionProvider->hasClass($classLower)) {
+                    continue;
+                }
+                $class = $this->reflectionProvider->getClass($classLower);
+                if (!$class->hasNativeMethod($methodLower)) {
+                    continue;
+                }
+                $method = $class->getNativeMethod($methodLower);
+                $className = $method->getDeclaringClass()->getName();
+                $functionName = $method->getName();
+                $inferred = $this->inference->inferForMethod($method);
+            }
+
+            if ($inferred === []) {
+                continue;
+            }
+            $declarations->replace(new DeclarationRecord($key, $className, $functionName, null, null, $stub->effects ?? [], [], [], inferred: $inferred));
+        }
     }
 
     private function buildHierarchy(CollectedDataNode $node): ClassHierarchy
@@ -381,7 +436,9 @@ final class EffectSystemRule implements Rule
                     $errorData[] = [
                         'file' => $record->file,
                         'line' => $record->line,
-                        'message' => $this->contradictionMessage($record, $effect, $origin),
+                        'message' => in_array($effect, $record->effects, true)
+                            ? $this->contradictionMessage($record, $effect, $origin)
+                            : $this->inferredContradictionMessage($record, $effect, $origin),
                         'identifier' => 'effects.contradiction',
                     ];
                     continue;
@@ -417,7 +474,7 @@ final class EffectSystemRule implements Rule
     }
 
     /**
-     * @param list<string> $path
+     * @param non-empty-list<string> $path
      */
     private function violationMessage(Declarations $declarations, DeclarationRecord $sink, string $effect, ContractOrigin $origin, array $path): string
     {
@@ -426,14 +483,31 @@ final class EffectSystemRule implements Rule
             $path,
         ));
 
+        $source = $declarations->get($path[array_key_last($path)]);
+        $inferredBy = $source !== null && !in_array($effect, $source->effects, true) ? ($source->inferred[$effect] ?? null) : null;
+
         return sprintf(
-            "%s %s %s but reaches effect '%s': %s (declares #[Effect('%s')]).",
+            "%s %s %s but reaches effect '%s': %s (%s).",
             $sink->className !== null ? 'Method' : 'Function',
             $sink->displayName(),
             $this->contractDescription($effect, $origin),
             $effect,
             $pathDisplay,
+            $inferredBy !== null
+                ? sprintf("effect '%s' inferred by %s", $effect, $inferredBy)
+                : sprintf("declares #[Effect('%s')]", $effect),
+        );
+    }
+
+    private function inferredContradictionMessage(DeclarationRecord $record, string $effect, ContractOrigin $origin): string
+    {
+        return sprintf(
+            "%s %s has effect '%s' (inferred by %s) but %s.",
+            $record->className !== null ? 'Method' : 'Function',
+            $record->displayName(),
             $effect,
+            $record->inferred[$effect] ?? '',
+            $this->contractDescription($effect, $origin),
         );
     }
 

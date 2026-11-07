@@ -11,7 +11,7 @@ final class AllowedEffectsTest extends EffectSystemRuleTestCase
 {
     protected function getRule(): Rule
     {
-        return new EffectSystemRule([], [], ['slow', 'io'], ['Tests\*', '*\Tests\*']);
+        return new EffectSystemRule([], [], ['slow', 'io'], ['Tests\*', '*\Tests\*'], $this->getEffectInference(), self::createReflectionProvider());
     }
 
     public function testUnknownEffectNamesAreReported(): void

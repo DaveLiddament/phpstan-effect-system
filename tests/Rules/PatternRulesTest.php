@@ -22,6 +22,8 @@ final class PatternRulesTest extends EffectSystemRuleTestCase
             ],
             self::ALLOWED_EFFECTS,
             ['Tests\*', '*\Tests\*'],
+            $this->getEffectInference(),
+            self::createReflectionProvider(),
         );
     }
 

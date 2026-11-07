@@ -29,6 +29,12 @@ final class Declarations
         }
     }
 
+    public function replace(DeclarationRecord $record): void
+    {
+        unset($this->records[$record->key]);
+        $this->add($record);
+    }
+
     public function get(string $key): ?DeclarationRecord
     {
         return $this->records[$key] ?? null;
