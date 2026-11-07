@@ -7,6 +7,7 @@ namespace DaveLiddament\PhpstanEffectSystem\Collectors;
 use PhpParser\Node;
 use PHPStan\Analyser\Scope;
 use PHPStan\Collectors\Collector;
+use PHPStan\DependencyInjection\AutowiredService;
 use PHPStan\Node\InClassNode;
 
 /**
@@ -15,6 +16,7 @@ use PHPStan\Node\InClassNode;
  *
  * @implements Collector<InClassNode, array{class: string, parents: list<string>, interfaces: list<string>}>
  */
+#[AutowiredService]
 final class ClassHierarchyCollector implements Collector
 {
     public function getNodeType(): string

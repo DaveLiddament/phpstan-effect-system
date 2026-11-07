@@ -10,6 +10,7 @@ use PhpParser\Node;
 use PhpParser\Node\Expr;
 use PhpParser\Node\Expr\New_;
 use PHPStan\Analyser\Scope;
+use PHPStan\DependencyInjection\AutowiredService;
 use PHPStan\Reflection\MethodReflection;
 use PHPStan\Reflection\ReflectionProvider;
 
@@ -18,6 +19,7 @@ use PHPStan\Reflection\ReflectionProvider;
  *
  * @phpstan-type Callee array{key: string, calledClass: string|null, method: string|null, dispatch: bool}
  */
+#[AutowiredService]
 final class CallResolver
 {
     public function __construct(

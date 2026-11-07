@@ -24,6 +24,8 @@ use DaveLiddament\PhpstanEffectSystem\Inference\EffectInference;
 use PhpParser\Node;
 use PhpParser\Node\Name\FullyQualified;
 use PHPStan\Analyser\Scope;
+use PHPStan\DependencyInjection\AutowiredParameter;
+use PHPStan\DependencyInjection\AutowiredService;
 use PHPStan\Node\CollectedDataNode;
 use PHPStan\Reflection\ReflectionProvider;
 use PHPStan\Rules\IdentifierRuleError;
@@ -36,6 +38,7 @@ use PHPStan\Rules\RuleErrorBuilder;
  *
  * @implements Rule<CollectedDataNode>
  */
+#[AutowiredService]
 final class EffectSystemRule implements Rule
 {
     private EffectsConfig $config;
@@ -47,9 +50,13 @@ final class EffectSystemRule implements Rule
      * @param list<string> $excludeImplementationsFrom
      */
     public function __construct(
+        #[AutowiredParameter(ref: '%effects.stubs%')]
         array $stubs,
+        #[AutowiredParameter(ref: '%effects.rules%')]
         array $rules,
+        #[AutowiredParameter(ref: '%effects.allowedEffects%')]
         array $allowedEffects,
+        #[AutowiredParameter(ref: '%effects.excludeImplementationsFrom%')]
         array $excludeImplementationsFrom,
         private EffectInference $inference,
         private ReflectionProvider $reflectionProvider,

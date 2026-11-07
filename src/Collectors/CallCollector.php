@@ -13,6 +13,7 @@ use PhpParser\Node\Expr\NullsafeMethodCall;
 use PhpParser\Node\Expr\StaticCall;
 use PHPStan\Analyser\Scope;
 use PHPStan\Collectors\Collector;
+use PHPStan\DependencyInjection\AutowiredService;
 
 /**
  * Records outgoing call edges for every method/function body. Calls inside
@@ -26,6 +27,7 @@ use PHPStan\Collectors\Collector;
  *
  * @implements Collector<CallLike, string>
  */
+#[AutowiredService]
 final class CallCollector implements Collector
 {
     public function __construct(
