@@ -1,0 +1,84 @@
+#!/usr/bin/env bash
+# Prepares an Amp orb for this repository: native PHP 8.4 and 8.5 (from
+# packages.sury.org), Composer, and the Composer dependencies.
+#
+# Locally the project runs PHP through Docker (see CLAUDE.md). Orbs have no
+# Docker daemon, so PHP is installed natively instead, as CI does.
+set -euo pipefail
+
+cd "$(dirname "${BASH_SOURCE[0]}")/.."
+
+PHP_VERSIONS=(8.4 8.5)
+DEFAULT_PHP=8.4
+
+step() {
+  printf '\n==> %s\n' "$*"
+  SECONDS=0
+}
+done_step() {
+  printf '    (%ss)\n' "$SECONDS"
+}
+
+packages=()
+for version in "${PHP_VERSIONS[@]}"; do
+  packages+=("php${version}-cli" "php${version}-xml" "php${version}-mbstring" "php${version}-zip")
+done
+
+step "Install PHP ${PHP_VERSIONS[*]}"
+missing=()
+for package in "${packages[@]}"; do
+  dpkg-query -W -f='${Status}' "$package" 2>/dev/null | grep -q 'install ok installed' || missing+=("$package")
+done
+if [ "${#missing[@]}" -gt 0 ]; then
+  if [ ! -f /etc/apt/sources.list.d/php.list ]; then
+    curl -fsSLo /tmp/debsuryorg-archive-keyring.deb https://packages.sury.org/debsuryorg-archive-keyring.deb
+    sudo dpkg -i /tmp/debsuryorg-archive-keyring.deb
+    rm -f /tmp/debsuryorg-archive-keyring.deb
+    codename="$(. /etc/os-release && echo "$VERSION_CODENAME")"
+    echo "deb [signed-by=/usr/share/keyrings/debsuryorg-archive-keyring.gpg] https://packages.sury.org/php/ ${codename} main" \
+      | sudo tee /etc/apt/sources.list.d/php.list >/dev/null
+  fi
+  sudo apt-get update -qq
+  sudo DEBIAN_FRONTEND=noninteractive apt-get install -y -qq --no-install-recommends "${missing[@]}" unzip
+fi
+sudo update-alternatives --set php "/usr/bin/php${DEFAULT_PHP}" >/dev/null
+# Match the Docker image: no CLI memory limit.
+for version in "${PHP_VERSIONS[@]}"; do
+  echo 'memory_limit = -1' | sudo tee "/etc/php/${version}/cli/conf.d/99-memlimit.ini" >/dev/null
+done
+php --version | head -1
+done_step
+
+step "Install Composer"
+if ! command -v composer >/dev/null; then
+  curl -fsSLo /tmp/composer.phar https://getcomposer.org/download/latest-stable/composer.phar
+  expected="$(curl -fsSL https://getcomposer.org/download/latest-stable/composer.phar.sha256)"
+  echo "${expected%% *}  /tmp/composer.phar" | sha256sum -c --quiet
+  sudo install -m 0755 /tmp/composer.phar /usr/local/bin/composer
+  rm -f /tmp/composer.phar
+fi
+composer --version
+done_step
+
+step "Install Composer dependencies"
+composer install --no-interaction --no-progress
+done_step
+
+step "Write orb guidance for agents"
+guidance_marker="<!-- phpstan-effect-system orb guidance -->"
+guidance_file="$HOME/.config/amp/AGENTS.md"
+mkdir -p "$(dirname "$guidance_file")"
+if ! grep -Fqx "$guidance_marker" "$guidance_file" 2>/dev/null; then
+  cat >>"$guidance_file" <<EOF
+
+$guidance_marker
+# phpstan-effect-system in an orb
+
+- Docker is not available in orbs. Ignore the Docker instructions in CLAUDE.md
+  and run PHP natively from the repository root, for example
+  \`vendor/bin/phpunit\` and \`vendor/bin/phpstan analyse\`.
+- \`php\` is PHP ${DEFAULT_PHP}. PHP 8.5 is installed as \`php8.5\`, for example
+  \`php8.5 vendor/bin/phpunit\`. Xdebug is not installed.
+EOF
+fi
+done_step
