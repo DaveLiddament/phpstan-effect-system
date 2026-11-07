@@ -57,6 +57,10 @@ final class InferrersTest extends EffectSystemRuleTestCase
                 "Method EffectTest\\Inference\\AuditRepository::updateLog() has effect 'state' (inferred by {$by}) but is #[EffectFree('state')].",
                 85,
             ],
+            [
+                "Method EffectTest\\Inference\\CustomerService::changeEmail() is #[EffectFree('state')] but reaches effect 'state': EffectTest\\Inference\\CustomerService::changeEmail() -> EffectTest\\Inference\\CustomerStore::updateEmail() (effect 'state' inferred by {$by}).",
+                111,
+            ],
         ]);
     }
 }

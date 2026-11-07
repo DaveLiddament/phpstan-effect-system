@@ -245,16 +245,20 @@ parameters:
             # Every update*() method of a class that is, extends or
             # implements App\Repository\Repository.
             - { instanceOf: 'App\Repository\Repository', methodPattern: 'update*', effects: ['db'] }
+            # Every update*() method of a class marked #[App\Attribute\Repository].
+            - { classHasAttribute: 'App\Attribute\Repository', methodPattern: 'update*', effects: ['db'] }
             # Every method of a vendor library.
             - { classPattern: 'League\Flysystem\*', methodPattern: '*', effects: ['io'] }
             # Functions, including built-ins.
             - { functionPattern: 'file_put_*', effects: ['io'] }
 ```
 
-A method source needs `methodPattern`, and may narrow it with `classPattern`
-and `instanceOf`; all that are given must match. Patterns are fnmatch-style
-and case-insensitive. They are matched against the class that **declares**
-the method.
+A method source needs `methodPattern`, and may narrow it with `classPattern`,
+`instanceOf` and `classHasAttribute`; all that are given must match. Patterns
+are fnmatch-style and case-insensitive. They are matched against the class
+that **declares** the method. `classHasAttribute` names the attribute class
+exactly, and only attributes on that class itself count: PHP attributes are
+not inherited.
 
 **An inferrer**, for conventions that need code. Extend `EffectInferrer`,
 override either method, and register the class as a service tagged

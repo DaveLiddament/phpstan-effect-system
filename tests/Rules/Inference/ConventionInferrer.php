@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace DaveLiddament\PhpstanEffectSystem\Tests\Rules\Inference;
 
 use DaveLiddament\PhpstanEffectSystem\Inference\EffectInferrer;
+use PHPStan\Reflection\AttributeReflection;
 use PHPStan\Reflection\ExtendedMethodReflection;
 use PHPStan\Reflection\FunctionReflection;
 
@@ -17,7 +18,9 @@ final class ConventionInferrer extends EffectInferrer
     public function effectsOfMethod(ExtendedMethodReflection $method): array
     {
         $class = $method->getDeclaringClass();
-        if ($class->is('EffectTest\Inference\Repository') && str_starts_with(strtolower($method->getName()), 'update')) {
+        $isRepository = $class->is('EffectTest\Inference\Repository')
+            || array_any($class->getAttributes(), static fn (AttributeReflection $attribute): bool => $attribute->getName() === 'EffectTest\Inference\AsRepository');
+        if ($isRepository && str_starts_with(strtolower($method->getName()), 'update')) {
             return ['state'];
         }
         if ($class->getName() === 'EffectTest\StubVendor\Mailer' && $method->getName() === 'send') {

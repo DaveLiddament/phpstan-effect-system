@@ -87,3 +87,36 @@ class AuditRepository implements Repository
     {
     }
 }
+
+#[\Attribute(\Attribute::TARGET_CLASS)]
+class AsRepository
+{
+}
+
+// Not a Repository by type, but marked as one by its attribute.
+#[AsRepository]
+class CustomerStore
+{
+    public function updateEmail(): void
+    {
+    }
+
+    public function findByEmail(): void
+    {
+    }
+}
+
+class CustomerService
+{
+    #[EffectFree('state')]
+    public function changeEmail(CustomerStore $customers): void
+    {
+        $customers->updateEmail();
+    }
+
+    #[EffectFree('state')]
+    public function lookup(CustomerStore $customers): void
+    {
+        $customers->findByEmail();
+    }
+}

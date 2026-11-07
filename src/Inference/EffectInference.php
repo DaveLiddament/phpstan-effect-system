@@ -6,6 +6,7 @@ namespace DaveLiddament\PhpstanEffectSystem\Inference;
 
 use DaveLiddament\PhpstanEffectSystem\Config\EffectsConfig;
 use InvalidArgumentException;
+use PHPStan\Reflection\ClassReflection;
 use PHPStan\Reflection\ExtendedMethodReflection;
 use PHPStan\Reflection\FunctionReflection;
 
@@ -19,11 +20,11 @@ use const FNM_NOESCAPE;
  */
 final class EffectInference
 {
-    /** @var list<array{classPattern: string|null, instanceOf: string|null, methodPattern: string|null, functionPattern: string|null, effects: list<string>, label: string}> */
+    /** @var list<array{classPattern: string|null, instanceOf: string|null, classHasAttribute: string|null, methodPattern: string|null, functionPattern: string|null, effects: list<string>, label: string}> */
     private array $sources = [];
 
     /**
-     * @param list<array{classPattern?: string, instanceOf?: string, methodPattern?: string, functionPattern?: string, effects?: list<string>}> $sources
+     * @param list<array{classPattern?: string, instanceOf?: string, classHasAttribute?: string, methodPattern?: string, functionPattern?: string, effects?: list<string>}> $sources
      * @param list<string> $allowedEffects
      * @param list<EffectInferrer> $inferrers
      */
@@ -39,8 +40,8 @@ final class EffectInference
             if ($isFunction === $isMethod) {
                 throw new InvalidArgumentException(sprintf('phpstan-effect-system: %s must define exactly one of "methodPattern" or "functionPattern".', $where));
             }
-            if ($isFunction && (isset($source['classPattern']) || isset($source['instanceOf']))) {
-                throw new InvalidArgumentException(sprintf('phpstan-effect-system: %s cannot combine "functionPattern" with "classPattern" or "instanceOf".', $where));
+            if ($isFunction && (isset($source['classPattern']) || isset($source['instanceOf']) || isset($source['classHasAttribute']))) {
+                throw new InvalidArgumentException(sprintf('phpstan-effect-system: %s cannot combine "functionPattern" with "classPattern", "instanceOf" or "classHasAttribute".', $where));
             }
             $effects = $source['effects'] ?? [];
             if ($effects === []) {
@@ -51,12 +52,13 @@ final class EffectInference
             $parsed = [
                 'classPattern' => $source['classPattern'] ?? null,
                 'instanceOf' => isset($source['instanceOf']) ? ltrim($source['instanceOf'], '\\') : null,
+                'classHasAttribute' => isset($source['classHasAttribute']) ? ltrim($source['classHasAttribute'], '\\') : null,
                 'methodPattern' => $source['methodPattern'] ?? null,
                 'functionPattern' => $source['functionPattern'] ?? null,
                 'effects' => $effects,
             ];
             $labelParts = [];
-            foreach (['classPattern', 'instanceOf', 'methodPattern', 'functionPattern'] as $field) {
+            foreach (['classPattern', 'instanceOf', 'classHasAttribute', 'methodPattern', 'functionPattern'] as $field) {
                 if ($parsed[$field] !== null) {
                     $labelParts[] = sprintf("%s: '%s'", $field, $parsed[$field]);
                 }
@@ -86,6 +88,9 @@ final class EffectInference
                 continue;
             }
             if ($source['instanceOf'] !== null && !$class->is($source['instanceOf'])) {
+                continue;
+            }
+            if ($source['classHasAttribute'] !== null && !self::hasAttribute($class, $source['classHasAttribute'])) {
                 continue;
             }
             $inferred = $this->add($inferred, $source['effects'], $source['label']);
@@ -147,6 +152,21 @@ final class EffectInference
     private function assertKnown(array $effects, EffectInferrer $inferrer, string $subject): void
     {
         EffectsConfig::assertKnownEffects($effects, $this->allowedEffects, sprintf('inferrer %s, for %s,', $inferrer::class, $subject));
+    }
+
+    /**
+     * Only the class's own attributes count: PHP attributes are not
+     * inherited.
+     */
+    private static function hasAttribute(ClassReflection $class, string $attributeClass): bool
+    {
+        foreach ($class->getAttributes() as $attribute) {
+            if (strcasecmp($attribute->getName(), $attributeClass) === 0) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     private static function matches(string $pattern, string $name): bool

@@ -5,7 +5,7 @@ parametersSchema:
 			structure({function: string(), effects: listOf(string())})
 		)),
 		sources: listOf(anyOf(
-			structure({?classPattern: string(), ?instanceOf: string(), methodPattern: string(), effects: listOf(string())}),
+			structure({?classPattern: string(), ?instanceOf: string(), ?classHasAttribute: string(), methodPattern: string(), effects: listOf(string())}),
 			structure({functionPattern: string(), effects: listOf(string())})
 		)),
 		rules: listOf(structure({

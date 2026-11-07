@@ -71,6 +71,10 @@ final class NeonWiringTest extends RuleTestCase
                 85,
             ],
             [
+                "Method EffectTest\\Inference\\CustomerService::changeEmail() is #[EffectFree('state')] but reaches effect 'state': EffectTest\\Inference\\CustomerService::changeEmail() -> EffectTest\\Inference\\CustomerStore::updateEmail() (effect 'state' inferred by {$inferrer}).",
+                111,
+            ],
+            [
                 "Method EffectTest\\Stubs\\Service::fetch() is #[EffectFree('io')] but reaches effect 'io': EffectTest\\Stubs\\Service::fetch() -> EffectTest\\Stubs\\HttpWrapper::get() -> file_get_contents() (declares #[Effect('io')]).",
                 20,
             ],

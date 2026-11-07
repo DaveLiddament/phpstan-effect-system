@@ -19,6 +19,7 @@ final class InferenceSourcesTest extends EffectSystemRuleTestCase
         return new EffectInference(
             [
                 ['instanceOf' => '\EffectTest\Inference\Repository', 'methodPattern' => 'update*', 'effects' => ['state']],
+                ['classHasAttribute' => '\EffectTest\Inference\AsRepository', 'methodPattern' => 'update*', 'effects' => ['state']],
                 ['classPattern' => 'EffectTest\StubVendor\*', 'methodPattern' => 'send', 'effects' => ['smtp']],
                 ['functionPattern' => 'file_put_*', 'effects' => ['io']],
                 ['functionPattern' => 'EffectTest\Inference\delete*', 'effects' => ['io']],
@@ -68,6 +69,10 @@ final class InferenceSourcesTest extends EffectSystemRuleTestCase
             [
                 "Method EffectTest\\Inference\\AuditRepository::updateLog() has effect 'state' (inferred by {$repositories}) but is #[EffectFree('state')].",
                 85,
+            ],
+            [
+                "Method EffectTest\\Inference\\CustomerService::changeEmail() is #[EffectFree('state')] but reaches effect 'state': EffectTest\\Inference\\CustomerService::changeEmail() -> EffectTest\\Inference\\CustomerStore::updateEmail() (effect 'state' inferred by the effects source (classHasAttribute: 'EffectTest\\Inference\\AsRepository', methodPattern: 'update*')).",
+                111,
             ],
         ]);
     }
