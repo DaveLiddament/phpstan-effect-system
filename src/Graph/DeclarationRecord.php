@@ -11,6 +11,7 @@ final class DeclarationRecord
      * @param list<string> $effectFree
      * @param list<string> $handles
      * @param list<string> $exemptFromRules effects whose pattern-rule contracts this method is exempt from
+     * @param array<string, string> $inferred effects inferred without an attribute => what inferred them
      */
     public function __construct(
         public readonly string $key,
@@ -24,22 +25,23 @@ final class DeclarationRecord
         public readonly bool $private = false,
         public readonly bool $abstract = false,
         public readonly array $exemptFromRules = [],
+        public readonly array $inferred = [],
     ) {
     }
 
     /**
      * Encodes the record as one string for the collectors. PHPStan keeps every
      * collected record in memory and in the result cache, and one string costs
-     * far less than an array of eleven fields. The key is rebuilt on decode.
+     * far less than an array of twelve fields. The key is rebuilt on decode.
      */
     public function encode(): string
     {
-        return serialize([$this->className, $this->name, $this->file, $this->line, $this->effects, $this->effectFree, $this->handles, $this->private, $this->abstract, $this->exemptFromRules]);
+        return serialize([$this->className, $this->name, $this->file, $this->line, $this->effects, $this->effectFree, $this->handles, $this->private, $this->abstract, $this->exemptFromRules, $this->inferred]);
     }
 
     public static function decode(string $encoded): self
     {
-        /** @var array{string|null, string, string|null, int|null, list<string>, list<string>, list<string>, bool, bool, list<string>} $data */
+        /** @var array{string|null, string, string|null, int|null, list<string>, list<string>, list<string>, bool, bool, list<string>, array<string, string>} $data */
         $data = unserialize($encoded, ['allowed_classes' => false]);
         [$className, $name] = $data;
 

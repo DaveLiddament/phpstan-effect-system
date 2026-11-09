@@ -27,6 +27,8 @@ final class PatternRuleExemptionsTest extends EffectSystemRuleTestCase
             ],
             ['slow', 'io'],
             ['Tests\*', '*\Tests\*'],
+            $this->getEffectInference(),
+            self::createReflectionProvider(),
         );
     }
 

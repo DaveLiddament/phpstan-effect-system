@@ -19,6 +19,8 @@ final class StubsTest extends EffectSystemRuleTestCase
             [],
             self::ALLOWED_EFFECTS,
             ['Tests\*', '*\Tests\*'],
+            $this->getEffectInference(),
+            self::createReflectionProvider(),
         );
     }
 

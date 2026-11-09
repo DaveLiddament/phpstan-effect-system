@@ -13,6 +13,7 @@ use DaveLiddament\PhpstanEffectSystem\Collectors\FunctionDeclarationCollector;
 use DaveLiddament\PhpstanEffectSystem\Collectors\MethodCallableCollector;
 use DaveLiddament\PhpstanEffectSystem\Collectors\MethodDeclarationCollector;
 use DaveLiddament\PhpstanEffectSystem\Collectors\StaticMethodCallableCollector;
+use DaveLiddament\PhpstanEffectSystem\Inference\EffectInference;
 use DaveLiddament\PhpstanEffectSystem\Rules\EffectSystemRule;
 use PHPStan\Testing\RuleTestCase;
 
@@ -22,16 +23,23 @@ use PHPStan\Testing\RuleTestCase;
 abstract class EffectSystemRuleTestCase extends RuleTestCase
 {
     /** Every effect name the fixtures use, except the deliberate typos. */
-    protected const ALLOWED_EFFECTS = ['slow', 'io', 'http', 'smtp'];
+    protected const ALLOWED_EFFECTS = ['slow', 'io', 'http', 'smtp', 'state'];
+
+    /** Shared by the collectors and the rule; tests of inference override it. */
+    protected function getEffectInference(): EffectInference
+    {
+        return new EffectInference([], self::ALLOWED_EFFECTS, []);
+    }
 
     protected function getCollectors(): array
     {
         $reader = new EffectAttributeReader();
         $resolver = new CallResolver(self::createReflectionProvider());
+        $inference = $this->getEffectInference();
 
         return [
-            new MethodDeclarationCollector($reader),
-            new FunctionDeclarationCollector($reader),
+            new MethodDeclarationCollector($reader, $inference),
+            new FunctionDeclarationCollector($reader, $inference),
             new CallCollector($resolver),
             new MethodCallableCollector($resolver),
             new StaticMethodCallableCollector($resolver),

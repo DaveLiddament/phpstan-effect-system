@@ -124,7 +124,7 @@ final class EffectsConfig
      * @param list<string> $effects
      * @param list<string> $allowedEffects
      */
-    private static function assertKnownEffects(array $effects, array $allowedEffects, string $where): void
+    public static function assertKnownEffects(array $effects, array $allowedEffects, string $where): void
     {
         foreach ($effects as $effect) {
             if (!in_array($effect, $allowedEffects, true)) {
