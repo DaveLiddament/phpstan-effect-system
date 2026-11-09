@@ -11,7 +11,7 @@ final class EffectSystemRuleTest extends EffectSystemRuleTestCase
 {
     protected function getRule(): Rule
     {
-        return new EffectSystemRule([], [], self::ALLOWED_EFFECTS, ['Tests\*', '*\Tests\*']);
+        return new EffectSystemRule([], [], self::ALLOWED_EFFECTS, ['Tests\*', '*\Tests\*'], $this->getEffectInference(), self::createReflectionProvider());
     }
 
     public function testDirectCallToEffectMethodFromEffectFreeMethodIsReported(): void

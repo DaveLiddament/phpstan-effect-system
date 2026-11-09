@@ -6,6 +6,7 @@ namespace DaveLiddament\PhpstanEffectSystem\Collectors;
 
 use DaveLiddament\PhpstanEffectSystem\Graph\DeclarationRecord;
 use DaveLiddament\PhpstanEffectSystem\Graph\MethodKey;
+use DaveLiddament\PhpstanEffectSystem\Inference\EffectInference;
 use PhpParser\Node;
 use PHPStan\Analyser\Scope;
 use PHPStan\Collectors\Collector;
@@ -20,6 +21,7 @@ final class FunctionDeclarationCollector implements Collector
 {
     public function __construct(
         private EffectAttributeReader $attributeReader,
+        private EffectInference $inference,
     ) {
     }
 
@@ -43,6 +45,7 @@ final class FunctionDeclarationCollector implements Collector
             $attributes['effectFree'],
             $attributes['handles'],
             exemptFromRules: $attributes['exemptFromRules'],
+            inferred: $this->inference->inferForFunction($function),
         ))->encode();
     }
 }

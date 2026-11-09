@@ -14,7 +14,7 @@ final class AllowedEffectsNotConfiguredTest extends EffectSystemRuleTestCase
 {
     protected function getRule(): Rule
     {
-        return new EffectSystemRule([], [], [], ['Tests\*', '*\Tests\*']);
+        return new EffectSystemRule([], [], [], ['Tests\*', '*\Tests\*'], $this->getEffectInference(), self::createReflectionProvider());
     }
 
     public function testEveryEffectNameIsReportedWhenAllowedEffectsIsNotConfigured(): void

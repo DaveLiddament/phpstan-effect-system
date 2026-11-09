@@ -43,7 +43,9 @@ HomeController::indexAction() -> OrderService::load() -> ApiClient::fetch() (dec
 ```
 
 To apply this to every controller without adding attributes to each one, use a
-[pattern rule](#configuration).
+[pattern rule](#configuration). Effects can be given by convention too, such as
+"every `update*()` method of a repository", with
+[sources or an inferrer](#inferring-effects-by-convention).
 
 Methods declare effects (e.g. `slow`, `io`, `db`) via attributes **at the source
 only**. The extension infers transitive effect propagation through the whole
@@ -197,6 +199,12 @@ parameters:
             - { method: 'GuzzleHttp\Client::request', effects: ['slow', 'http'] }
             - { function: 'file_get_contents', effects: ['io'] }
 
+        # Pattern-based sources: effects by convention, for analysed and
+        # vendor code alike. See "Inferring effects by convention".
+        sources:
+            - { instanceOf: 'App\Repository\Repository', methodPattern: 'update*', effects: ['db'] }
+            - { functionPattern: 'file_put_*', effects: ['io'] }
+
         # Pattern-based sinks: architectural sweeps without touching code.
         # Patterns are fnmatch-style, case-insensitive.
         rules:
@@ -219,6 +227,88 @@ Notes on stubs:
   through subclasses resolve to the declaring class).
 - Stubs apply only to unanalysed code; a stub for a method in your analysed
   paths is ignored (the analysed declaration wins).
+
+### Inferring effects by convention
+
+Attributes suit one-off sources. When a whole family of methods has an effect
+by convention, describe the convention once instead. There are two ways, and
+both apply to analysed code and to vendor and built-in code your code calls.
+An inferred effect behaves exactly like `#[Effect]`.
+
+**Configuration**, for conventions that name patterns. Each entry in
+`sources` is either a method source or a function source:
+
+```neon
+parameters:
+    effects:
+        sources:
+            # Every update*() method of a class that is, extends or
+            # implements App\Repository\Repository.
+            - { instanceOf: 'App\Repository\Repository', methodPattern: 'update*', effects: ['db'] }
+            # Every update*() method of a class marked #[App\Attribute\Repository].
+            - { classHasAttribute: 'App\Attribute\Repository', methodPattern: 'update*', effects: ['db'] }
+            # Every method of a vendor library.
+            - { classPattern: 'League\Flysystem\*', methodPattern: '*', effects: ['io'] }
+            # Functions, including built-ins.
+            - { functionPattern: 'file_put_*', effects: ['io'] }
+```
+
+A method source needs `methodPattern`, and may narrow it with `classPattern`,
+`instanceOf` and `classHasAttribute`; all that are given must match. Patterns
+are fnmatch-style and case-insensitive. They are matched against the class
+that **declares** the method. `classHasAttribute` names the attribute class
+exactly, and only attributes on that class itself count: PHP attributes are
+not inherited.
+
+**An inferrer**, for conventions that need code. Extend `EffectInferrer`,
+override either method, and register the class as a service tagged
+`effects.inferrer`:
+
+```php
+use DaveLiddament\PhpstanEffectSystem\Inference\EffectInferrer;
+use PHPStan\Reflection\ExtendedMethodReflection;
+use PHPStan\Reflection\FunctionReflection;
+
+final class AppEffects extends EffectInferrer
+{
+    public function effectsOfMethod(ExtendedMethodReflection $method): array
+    {
+        $class = $method->getDeclaringClass();
+        if ($class->is(Repository::class) && preg_match('/^(update|save|delete)/i', $method->getName()) === 1) {
+            return ['db'];
+        }
+
+        return [];
+    }
+
+    public function effectsOfFunction(FunctionReflection $function): array
+    {
+        return in_array(strtolower($function->getName()), ['unlink', 'rename', 'mkdir'], true) ? ['io'] : [];
+    }
+}
+```
+
+```neon
+services:
+    -
+        class: App\PHPStan\AppEffects
+        tags:
+            - effects.inferrer
+```
+
+Violation messages name what inferred the effect, for example
+`App\Repository\OrderRepository::updateStatus() (effect 'db' inferred by App\PHPStan\AppEffects)`.
+Effect names from both must be listed in `allowedEffects`; a source with any
+other name throws at startup, and an inferrer that returns one stops the
+analysis with an error naming the inferrer and the method.
+
+PHPStan reruns the analysis when an inferrer's file changes, so its result
+cache never keeps effects from an older version of the inferrer.
+
+Unanalysed methods are only looked at when analysed code calls them directly.
+To give an effect to a vendor method reached only through dispatch, such as
+one an analysed class inherits from a vendor parent and a call through an
+analysed interface lands on, use a stub.
 
 ### Exempting methods from a pattern rule
 
@@ -268,7 +358,7 @@ covers for that effect, or that no longer reaches it.
 | Identifier | Reported when | Location |
 |---|---|---|
 | `effects.violation` | An `EffectFree` method (attribute, inherited, or pattern rule) transitively reaches the effect. The message includes a shortest call path. | Sink method's declaration |
-| `effects.contradiction` | A method declares `Effect('x')` while also being contractually `EffectFree('x')`. | The declaring method |
+| `effects.contradiction` | A method declares `Effect('x')`, or has it inferred, while also being contractually `EffectFree('x')`. | The declaring method |
 | `effects.invalidExemption` | A method has `#[ExemptFromEffectRule('x')]` but its `EffectFree('x')` contract is its own or inherited, which an exemption cannot drop. | The declaring method |
 | `effects.unusedExemption` | A method has `#[ExemptFromEffectRule('x')]` but no pattern rule requires it to be effect-free for `x`, or it doesn't reach `x`. | The declaring method |
 | `effects.unusedExclusion` | A pattern rule's `exclude` entry matches no method the rule applies to. | No file (reported as `N/A`); suppress by identifier if needed |

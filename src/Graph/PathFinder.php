@@ -25,7 +25,7 @@ final class PathFinder
     /**
      * @param array<string, array<string, true>> $effects reachable effects per key
      * @param array<string, array<string, true>> $declared declared effects per key
-     * @return list<string> keys from the sink to the declaring source (inclusive)
+     * @return non-empty-list<string> keys from the sink to the declaring source (inclusive)
      */
     public function findPath(CallGraph $graph, string $sink, string $effect, array $effects, array $declared): array
     {
