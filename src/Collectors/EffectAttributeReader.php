@@ -8,6 +8,7 @@ use DaveLiddament\PhpstanEffectSystem\Attributes\Effect;
 use DaveLiddament\PhpstanEffectSystem\Attributes\EffectFree;
 use DaveLiddament\PhpstanEffectSystem\Attributes\ExemptFromEffectRule;
 use DaveLiddament\PhpstanEffectSystem\Attributes\HandlesEffect;
+use PHPStan\DependencyInjection\AutowiredService;
 use PHPStan\Reflection\Php\PhpFunctionFromParserNodeReflection;
 
 /**
@@ -17,6 +18,7 @@ use PHPStan\Reflection\Php\PhpFunctionFromParserNodeReflection;
  * recorded; class constants fold to constant strings and work, truly dynamic
  * expressions are skipped (documented limitation).
  */
+#[AutowiredService]
 final class EffectAttributeReader
 {
     private const ATTRIBUTE_BUCKETS = [

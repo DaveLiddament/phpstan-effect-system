@@ -10,6 +10,7 @@ use DaveLiddament\PhpstanEffectSystem\Inference\EffectInference;
 use PhpParser\Node;
 use PHPStan\Analyser\Scope;
 use PHPStan\Collectors\Collector;
+use PHPStan\DependencyInjection\AutowiredService;
 use PHPStan\Node\InFunctionNode;
 
 /**
@@ -17,6 +18,7 @@ use PHPStan\Node\InFunctionNode;
  *
  * @implements Collector<InFunctionNode, string>
  */
+#[AutowiredService]
 final class FunctionDeclarationCollector implements Collector
 {
     public function __construct(

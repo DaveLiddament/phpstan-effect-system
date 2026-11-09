@@ -7,6 +7,7 @@ namespace DaveLiddament\PhpstanEffectSystem\Collectors;
 use PhpParser\Node;
 use PHPStan\Analyser\Scope;
 use PHPStan\Collectors\Collector;
+use PHPStan\DependencyInjection\AutowiredService;
 use PHPStan\Node\StaticMethodCallableNode;
 
 /**
@@ -20,6 +21,7 @@ use PHPStan\Node\StaticMethodCallableNode;
  *
  * @implements Collector<StaticMethodCallableNode, string>
  */
+#[AutowiredService]
 final class StaticMethodCallableCollector implements Collector
 {
     public function __construct(

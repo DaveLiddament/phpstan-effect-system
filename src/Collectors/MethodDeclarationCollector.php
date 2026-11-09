@@ -10,6 +10,7 @@ use DaveLiddament\PhpstanEffectSystem\Inference\EffectInference;
 use PhpParser\Node;
 use PHPStan\Analyser\Scope;
 use PHPStan\Collectors\Collector;
+use PHPStan\DependencyInjection\AutowiredService;
 use PHPStan\Node\InClassMethodNode;
 
 /**
@@ -19,6 +20,7 @@ use PHPStan\Node\InClassMethodNode;
  *
  * @implements Collector<InClassMethodNode, string>
  */
+#[AutowiredService]
 final class MethodDeclarationCollector implements Collector
 {
     public function __construct(

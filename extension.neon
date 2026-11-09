@@ -1,3 +1,6 @@
+attributeServicesDirectories:
+	- src
+
 parametersSchema:
 	effects: structure({
 		stubs: listOf(anyOf(
@@ -30,49 +33,8 @@ parameters:
 
 services:
 	-
-		class: DaveLiddament\PhpstanEffectSystem\Collectors\EffectAttributeReader
-	-
 		class: DaveLiddament\PhpstanEffectSystem\Inference\EffectInference
 		arguments:
 			sources: %effects.sources%
 			allowedEffects: %effects.allowedEffects%
 			inferrers: tagged(effects.inferrer)
-	-
-		class: DaveLiddament\PhpstanEffectSystem\Collectors\MethodDeclarationCollector
-		tags:
-			- phpstan.collector
-	-
-		class: DaveLiddament\PhpstanEffectSystem\Collectors\FunctionDeclarationCollector
-		tags:
-			- phpstan.collector
-	-
-		class: DaveLiddament\PhpstanEffectSystem\Collectors\CallResolver
-	-
-		class: DaveLiddament\PhpstanEffectSystem\Collectors\CallCollector
-		tags:
-			- phpstan.collector
-	-
-		class: DaveLiddament\PhpstanEffectSystem\Collectors\MethodCallableCollector
-		tags:
-			- phpstan.collector
-	-
-		class: DaveLiddament\PhpstanEffectSystem\Collectors\StaticMethodCallableCollector
-		tags:
-			- phpstan.collector
-	-
-		class: DaveLiddament\PhpstanEffectSystem\Collectors\FunctionCallableCollector
-		tags:
-			- phpstan.collector
-	-
-		class: DaveLiddament\PhpstanEffectSystem\Collectors\ClassHierarchyCollector
-		tags:
-			- phpstan.collector
-	-
-		class: DaveLiddament\PhpstanEffectSystem\Rules\EffectSystemRule
-		tags:
-			- phpstan.rules.rule
-		arguments:
-			stubs: %effects.stubs%
-			rules: %effects.rules%
-			allowedEffects: %effects.allowedEffects%
-			excludeImplementationsFrom: %effects.excludeImplementationsFrom%
