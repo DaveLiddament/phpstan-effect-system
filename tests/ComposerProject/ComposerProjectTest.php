@@ -4,24 +4,32 @@ declare(strict_types=1);
 
 namespace DaveLiddament\PhpstanEffectSystem\Tests\ComposerProject;
 
+use PHPUnit\Framework\Attributes\TestWith;
 use PHPUnit\Framework\TestCase;
 use RuntimeException;
 
 /**
- * Installs this package into the consumer project in e2e/ the way a user
- * would: Composer symlinks it from a path repository and the project's
- * phpstan.neon includes vendor/.../extension.neon. Then runs that project's
- * PHPStan and checks the JSON output. This covers the packaging (composer.json
- * autoload, the installed extension.neon) that the other tests skip.
+ * Installs this package into a consumer project in e2e/ the way a user would,
+ * with Composer symlinking it from a path repository, then runs that project's
+ * PHPStan and checks the JSON output. This covers the packaging that the other
+ * tests skip. Both projects analyse e2e/src with e2e/effects.neon and differ
+ * only in how the extension is registered:
+ *
+ * - manual-include: phpstan.neon includes vendor/.../extension.neon.
+ * - extension-installer: phpstan/extension-installer registers it from
+ *   extra.phpstan in this package's composer.json.
  *
  * Needs `composer` on PATH and network access, so it is not in the default
  * test suite: run it with `vendor/bin/phpunit --testsuite composer-project`.
  */
 final class ComposerProjectTest extends TestCase
 {
-    public function testInstalledExtensionReportsViolations(): void
+    #[TestWith(['manual-include'], 'manual-include')]
+    #[TestWith(['extension-installer'], 'extension-installer')]
+    public function testInstalledExtensionReportsViolations(string $project): void
     {
-        $projectDir = dirname(__DIR__, 2) . '/e2e';
+        $sourceDir = dirname(__DIR__, 2) . '/e2e/src';
+        $projectDir = dirname(__DIR__, 2) . '/e2e/' . $project;
 
         // Start clean: with a lock file already present, Composer keeps the
         // package metadata it recorded for this commit, so changes to
@@ -33,7 +41,7 @@ final class ComposerProjectTest extends TestCase
         $expected = [
             'totals' => ['errors' => 0, 'file_errors' => 2],
             'files' => [
-                $projectDir . '/src/Controller/OrderController.php' => [
+                $sourceDir . '/Controller/OrderController.php' => [
                     'errors' => 1,
                     'messages' => [[
                         'message' => "Method E2eApp\\Controller\\OrderController::showAction() is required to be effect-free for 'slow' by the effects rule (classPattern: 'E2eApp\\Controller\\*', methodPattern: '*Action') but reaches effect 'slow': E2eApp\\Controller\\OrderController::showAction() -> E2eApp\\OrderService::load() -> E2eApp\\ApiClient::fetch() (declares #[Effect('slow')]).",
@@ -42,7 +50,7 @@ final class ComposerProjectTest extends TestCase
                         'identifier' => 'effects.violation',
                     ]],
                 ],
-                $projectDir . '/src/PriceCalculator.php' => [
+                $sourceDir . '/PriceCalculator.php' => [
                     'errors' => 1,
                     'messages' => [[
                         'message' => "Method E2eApp\\PriceCalculator::total() is #[EffectFree('slow')] but reaches effect 'slow': E2eApp\\PriceCalculator::total() -> E2eApp\\OrderService::load() -> E2eApp\\ApiClient::fetch() (declares #[Effect('slow')]).",

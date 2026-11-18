@@ -1,11 +1,8 @@
-includes:
-	- vendor/dave-liddament/phpstan-effect-system/extension.neon
-
+# Shared by both consumer projects, so they must report the same errors.
 parameters:
 	level: 0
 	paths:
 		- src
-	tmpDir: tmp
 	effects:
 		allowedEffects: ['slow']
 		rules:

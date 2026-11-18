@@ -1,0 +1,6 @@
+includes:
+	- vendor/dave-liddament/phpstan-effect-system/extension.neon
+	- ../effects.neon
+
+parameters:
+	tmpDir: tmp

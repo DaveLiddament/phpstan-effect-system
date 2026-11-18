@@ -1,0 +1,7 @@
+# extension.neon is not included here: phpstan/extension-installer registers
+# it from extra.phpstan in the extension's composer.json.
+includes:
+	- ../effects.neon
+
+parameters:
+	tmpDir: tmp

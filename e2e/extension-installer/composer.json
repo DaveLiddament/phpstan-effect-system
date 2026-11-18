@@ -1,0 +1,30 @@
+{
+    "name": "dave-liddament/phpstan-effect-system-e2e-extension-installer",
+    "description": "A consumer project that installs the extension through Composer and registers it with phpstan/extension-installer, used by tests/ComposerProject.",
+    "type": "project",
+    "license": "MIT",
+    "repositories": [
+        {
+            "type": "path",
+            "url": "../..",
+            "options": {
+                "symlink": true
+            }
+        }
+    ],
+    "require-dev": {
+        "dave-liddament/phpstan-effect-system": "@dev",
+        "phpstan/extension-installer": "^1.4",
+        "phpstan/phpstan": "^2.2.6"
+    },
+    "autoload": {
+        "psr-4": {
+            "E2eApp\\": "../src/"
+        }
+    },
+    "config": {
+        "allow-plugins": {
+            "phpstan/extension-installer": true
+        }
+    }
+}
