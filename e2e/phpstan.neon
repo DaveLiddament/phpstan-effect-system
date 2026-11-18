@@ -1,0 +1,12 @@
+includes:
+	- vendor/dave-liddament/phpstan-effect-system/extension.neon
+
+parameters:
+	level: 0
+	paths:
+		- src
+	tmpDir: tmp
+	effects:
+		allowedEffects: ['slow']
+		rules:
+			- { classPattern: 'E2eApp\Controller\*', methodPattern: '*Action', effectFree: ['slow'] }

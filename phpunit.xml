@@ -4,10 +4,16 @@
          bootstrap="vendor/autoload.php"
          colors="true"
          failOnRisky="true"
-         failOnWarning="true">
+         failOnWarning="true"
+         defaultTestSuite="default">
     <testsuites>
         <testsuite name="default">
             <directory>tests</directory>
+            <exclude>tests/ComposerProject</exclude>
+        </testsuite>
+        <!-- Needs composer and network access. -->
+        <testsuite name="composer-project">
+            <directory>tests/ComposerProject</directory>
         </testsuite>
     </testsuites>
 </phpunit>

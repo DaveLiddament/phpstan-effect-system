@@ -37,6 +37,9 @@ jobs:
       - name: Run tests
         run: vendor/bin/phpunit
 
+      - name: Run Composer project test
+        run: vendor/bin/phpunit --testsuite composer-project
+
       - name: PHPStan
         run: vendor/bin/phpstan analyse --memory-limit=1G --no-progress
 
