@@ -1,0 +1,9 @@
+# Shared by both consumer projects, so they must report the same errors.
+parameters:
+	level: 0
+	paths:
+		- src
+	effects:
+		allowedEffects: ['slow']
+		rules:
+			- { classPattern: 'E2eApp\Controller\*', methodPattern: '*Action', effectFree: ['slow'] }
